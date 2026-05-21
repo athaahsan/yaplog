@@ -103,13 +103,14 @@ function Sidebar({
                 <button
                   className="theme-option"
                   type="button"
+                  aria-label={`Use ${option.label.toLowerCase()} theme`}
                   aria-pressed={active}
                   data-active={active}
                   key={option.value}
                   onClick={() => onThemeChange(option.value)}
+                  title={option.label}
                 >
-                  <Icon size={16} />
-                  <span>{option.label}</span>
+                  <Icon size={15} />
                 </button>
               )
             })}

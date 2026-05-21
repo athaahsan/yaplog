@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { initialJournalEntries, moodOptions } from '../../data/journalSeed'
-import {
-  combineDateAndTime,
-  getCurrentDateTimeParts,
-  toDateInputValue,
-  toDateTimeInputValue,
-  toStoredDateTime,
-  toTimeInputValue,
-} from '../../lib/dateTime'
 import JournalEditor from './JournalEditor'
 import JournalTable from './JournalTable'
 import JournalToolbar from './JournalToolbar'
@@ -28,29 +20,43 @@ function JournalWorkspace() {
   const [journalEntries, setJournalEntries] = useState(initialJournalEntries)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMoods, setSelectedMoods] = useState([])
-  const [selectedLocations, setSelectedLocations] = useState([])
   const [favoritedOnly, setFavoritedOnly] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [sortConfig, setSortConfig] = useState({
+    direction: 'desc',
+    key: 'createdAt',
+  })
   const filterRef = useRef(null)
 
-  const locationOptions = Array.from(
-    new Set(journalEntries.map((entry) => entry.location || 'Not set')),
-  )
-  const activeFilterCount =
-    selectedMoods.length + selectedLocations.length + (favoritedOnly ? 1 : 0)
-  const filteredEntries = journalEntries.filter((entry) => {
-    const location = entry.location || 'Not set'
-    const matchesSearch = entry.title
-      .toLowerCase()
-      .includes(searchQuery.trim().toLowerCase())
-    const matchesMood =
-      selectedMoods.length === 0 || selectedMoods.includes(entry.mood)
-    const matchesLocation =
-      selectedLocations.length === 0 || selectedLocations.includes(location)
-    const matchesFavorite = !favoritedOnly || entry.favorite
+  const activeFilterCount = selectedMoods.length + (favoritedOnly ? 1 : 0)
+  const filteredEntries = journalEntries
+    .filter((entry) => {
+      const matchesSearch = entry.title
+        .toLowerCase()
+        .includes(searchQuery.trim().toLowerCase())
+      const matchesMood =
+        selectedMoods.length === 0 || selectedMoods.includes(entry.mood)
+      const matchesFavorite = !favoritedOnly || entry.favorite
 
-    return matchesSearch && matchesMood && matchesLocation && matchesFavorite
-  })
+      return matchesSearch && matchesMood && matchesFavorite
+    })
+    .sort((firstEntry, secondEntry) => {
+      const directionModifier = sortConfig.direction === 'asc' ? 1 : -1
+
+      if (sortConfig.key === 'title') {
+        return (
+          firstEntry.title.localeCompare(secondEntry.title, undefined, {
+            sensitivity: 'base',
+          }) * directionModifier
+        )
+      }
+
+      return (
+        (new Date(firstEntry[sortConfig.key]).getTime() -
+          new Date(secondEntry[sortConfig.key]).getTime()) *
+        directionModifier
+      )
+    })
   const allEntriesSelected =
     filteredEntries.length > 0 &&
     filteredEntries.every((entry) => selectedEntryIds.includes(entry.id))
@@ -65,25 +71,6 @@ function JournalWorkspace() {
     document.addEventListener('mousedown', handleOutsideClick)
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [])
-
-  useEffect(() => {
-    if (journalMode !== 'editor' || !entryDraft?.useCurrentDateTime) {
-      return undefined
-    }
-
-    const syncCurrentDateTime = () => {
-      setEntryDraft((draft) =>
-        draft?.useCurrentDateTime
-          ? { ...draft, ...getCurrentDateTimeParts() }
-          : draft,
-      )
-    }
-
-    syncCurrentDateTime()
-    const intervalId = window.setInterval(syncCurrentDateTime, 30000)
-
-    return () => window.clearInterval(intervalId)
-  }, [journalMode, entryDraft?.useCurrentDateTime])
 
   function toggleSelectAll() {
     setSelectedEntryIds((current) =>
@@ -111,22 +98,34 @@ function JournalWorkspace() {
 
   function clearFilters() {
     setSelectedMoods([])
-    setSelectedLocations([])
     setFavoritedOnly(false)
   }
 
-  function openNewEntry() {
-    const now = getCurrentDateTimeParts()
+  function clearSelection() {
+    setSelectedEntryIds([])
+  }
 
+  function deleteSelectedEntries() {
+    setJournalEntries((entries) =>
+      entries.filter((entry) => !selectedEntryIds.includes(entry.id)),
+    )
+    setSelectedEntryIds([])
+  }
+
+  function updateSort(nextKey) {
+    setSortConfig((current) => ({
+      direction:
+        current.key === nextKey && current.direction === 'asc' ? 'desc' : 'asc',
+      key: nextKey,
+    }))
+  }
+
+  function openNewEntry() {
     setEditingEntryId(null)
     setEntryDraft({
       title: '',
       body: '',
-      date: now.date,
-      time: now.time,
-      useCurrentDateTime: true,
       mood: moodOptions[1],
-      location: '',
       favorite: false,
     })
     setJournalMode('editor')
@@ -134,33 +133,12 @@ function JournalWorkspace() {
 
   function openEntry(entry) {
     setEditingEntryId(entry.id)
-    setEntryDraft({
-      ...entry,
-      date: toDateInputValue(toDateTimeInputValue(entry.dateTime)),
-      time: toTimeInputValue(toDateTimeInputValue(entry.dateTime)),
-      useCurrentDateTime: false,
-    })
+    setEntryDraft(entry)
     setJournalMode('editor')
   }
 
   function updateEntryDraft(field, value) {
     setEntryDraft((draft) => ({ ...draft, [field]: value }))
-  }
-
-  function toggleCurrentDateTime() {
-    setEntryDraft((draft) => {
-      const nextUseCurrentDateTime = !draft.useCurrentDateTime
-
-      if (!nextUseCurrentDateTime) {
-        return { ...draft, useCurrentDateTime: false }
-      }
-
-      return {
-        ...draft,
-        ...getCurrentDateTimeParts(),
-        useCurrentDateTime: true,
-      }
-    })
   }
 
   function closeEditor() {
@@ -171,21 +149,15 @@ function JournalWorkspace() {
 
   function saveEntry() {
     const title = entryDraft.title.trim() || 'Untitled entry'
-    const dateTime = entryDraft.useCurrentDateTime
-      ? new Date().toISOString()
-      : toStoredDateTime(combineDateAndTime(entryDraft.date, entryDraft.time))
+    const savedAt = new Date().toISOString()
     const savedEntry = {
       ...entryDraft,
       id: editingEntryId || `entry-${Date.now()}`,
       title,
-      dateTime,
-      location: entryDraft.location.trim(),
+      createdAt: entryDraft.createdAt || savedAt,
+      updatedAt: savedAt,
       body: entryDraft.body.trim(),
     }
-
-    delete savedEntry.date
-    delete savedEntry.time
-    delete savedEntry.useCurrentDateTime
 
     setJournalEntries((entries) =>
       editingEntryId
@@ -202,7 +174,6 @@ function JournalWorkspace() {
         moodOptions={moodOptions}
         onBack={closeEditor}
         onSave={saveEntry}
-        onToggleCurrentDateTime={toggleCurrentDateTime}
         onUpdateDraft={updateEntryDraft}
       />
     )
@@ -222,19 +193,17 @@ function JournalWorkspace() {
         favoritedOnly={favoritedOnly}
         filterOpen={filterOpen}
         filterRef={filterRef}
-        locationOptions={locationOptions}
         moodOptions={moodOptions}
+        onClearSelection={clearSelection}
         onClearFilters={clearFilters}
+        onDeleteSelected={deleteSelectedEntries}
         onFavoritedOnlyChange={setFavoritedOnly}
         onNewEntry={openNewEntry}
         onSearchChange={setSearchQuery}
         onToggleFilter={() => setFilterOpen((open) => !open)}
-        onToggleLocation={(location) =>
-          toggleListValue(location, setSelectedLocations)
-        }
         onToggleMood={(mood) => toggleListValue(mood, setSelectedMoods)}
         searchQuery={searchQuery}
-        selectedLocations={selectedLocations}
+        selectedCount={selectedEntryIds.length}
         selectedMoods={selectedMoods}
       />
 
@@ -245,7 +214,9 @@ function JournalWorkspace() {
         onToggleEntrySelection={toggleEntrySelection}
         onToggleFavorite={toggleFavorite}
         onToggleSelectAll={toggleSelectAll}
+        onUpdateSort={updateSort}
         selectedEntryIds={selectedEntryIds}
+        sortConfig={sortConfig}
       />
     </div>
   )

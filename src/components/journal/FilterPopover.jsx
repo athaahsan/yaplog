@@ -1,12 +1,9 @@
 function FilterPopover({
   favoritedOnly,
-  locationOptions,
   moodOptions,
   onClearFilters,
   onFavoritedOnlyChange,
-  onToggleLocation,
   onToggleMood,
-  selectedLocations,
   selectedMoods,
 }) {
   return (
@@ -32,22 +29,6 @@ function FilterPopover({
             >
               {mood}
             </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="filter-section" aria-labelledby="location-filter-heading">
-        <h2 id="location-filter-heading">Location</h2>
-        <div className="filter-check-list">
-          {locationOptions.map((location) => (
-            <label className="filter-check" key={location}>
-              <input
-                type="checkbox"
-                checked={selectedLocations.includes(location)}
-                onChange={() => onToggleLocation(location)}
-              />
-              <span>{location}</span>
-            </label>
           ))}
         </div>
       </section>

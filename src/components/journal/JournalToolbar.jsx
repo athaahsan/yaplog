@@ -1,4 +1,4 @@
-import { Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import FilterPopover from './FilterPopover'
 
 function JournalToolbar({
@@ -6,19 +6,45 @@ function JournalToolbar({
   favoritedOnly,
   filterOpen,
   filterRef,
-  locationOptions,
   moodOptions,
+  onClearSelection,
   onClearFilters,
+  onDeleteSelected,
   onFavoritedOnlyChange,
   onNewEntry,
   onSearchChange,
   onToggleFilter,
-  onToggleLocation,
   onToggleMood,
   searchQuery,
-  selectedLocations,
+  selectedCount,
   selectedMoods,
 }) {
+  if (selectedCount > 0) {
+    return (
+      <div className="journal-toolbar selection-toolbar">
+        <div className="selection-summary">
+          <span>{selectedCount} selected</span>
+        </div>
+        <button
+          className="toolbar-button"
+          type="button"
+          onClick={onClearSelection}
+        >
+          <X size={16} />
+          <span>Clear</span>
+        </button>
+        <button
+          className="delete-selection-button"
+          type="button"
+          onClick={onDeleteSelected}
+        >
+          <Trash2 size={16} />
+          <span>Delete</span>
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="journal-toolbar">
       <div className="filter-control" ref={filterRef}>
@@ -40,13 +66,10 @@ function JournalToolbar({
         {filterOpen && (
           <FilterPopover
             favoritedOnly={favoritedOnly}
-            locationOptions={locationOptions}
             moodOptions={moodOptions}
             onClearFilters={onClearFilters}
             onFavoritedOnlyChange={onFavoritedOnlyChange}
-            onToggleLocation={onToggleLocation}
             onToggleMood={onToggleMood}
-            selectedLocations={selectedLocations}
             selectedMoods={selectedMoods}
           />
         )}
@@ -64,7 +87,7 @@ function JournalToolbar({
 
       <button className="new-entry-button" type="button" onClick={onNewEntry}>
         <Plus size={16} />
-        <span>New entry</span>
+        <span>New</span>
       </button>
     </div>
   )
