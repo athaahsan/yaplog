@@ -752,6 +752,7 @@
 
 .select-column {
   width: 44px;
+  cursor: pointer;
 }
 
 .journal-table .select-column {
@@ -794,8 +795,8 @@
 }
 
 .journal-table input[type='checkbox']:checked {
-  border-color: color-mix(in oklch, var(--foreground) 34%, var(--border));
-  background: color-mix(in oklch, var(--foreground) 13%, var(--background));
+  border-color: color-mix(in oklch, var(--muted-foreground) 48%, transparent);
+  background: color-mix(in oklch, var(--background) 86%, var(--muted));
 }
 
 .journal-table input[type='checkbox']:checked::after {
@@ -1012,7 +1013,7 @@
   display: flex;
   width: fit-content;
   max-width: 100%;
-  gap: 6px;
+  gap: 8px;
   padding: 0;
   align-items: center;
 }
@@ -1112,7 +1113,7 @@
   flex: 0 0 auto;
   height: 0;
   width: 100%;
-  margin: 2px 0 10px;
+  margin: 2px 0 12px;
   border-top: 1px solid color-mix(in oklch, var(--muted-foreground) 24%, transparent);
 }
 
@@ -1206,6 +1207,7 @@
   font-weight: 700;
   letter-spacing: 0;
   line-height: 1.1;
+  margin-bottom: 0;
 }
 
 .entry-title-input::placeholder,

@@ -84,12 +84,21 @@ function JournalTable({
               tabIndex={0}
               onClick={() => onOpenEntry(entry)}
             >
-              <td className="select-column">
+              <td
+                className="select-column"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onToggleEntrySelection(entry.id)
+                }}
+              >
                 <input
                   type="checkbox"
                   aria-label={`Select ${entry.title}`}
                   checked={selectedEntryIds.includes(entry.id)}
-                  onChange={() => onToggleEntrySelection(entry.id)}
+                  onChange={(event) => {
+                    event.stopPropagation()
+                    onToggleEntrySelection(entry.id)
+                  }}
                   onClick={(event) => event.stopPropagation()}
                 />
               </td>
