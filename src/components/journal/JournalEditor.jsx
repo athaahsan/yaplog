@@ -6,27 +6,24 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const moodNameMap = {
-  '🤩': 'excited',
   '😊': 'happy',
   '😐': 'neutral',
-  '😩': 'tired',
-  '😢': 'sad',
-  '😡': 'angry',
+  '😔': 'sad',
+  '🫩': 'done',
+  '😰': 'anxious',
 }
 
 const moodToneClassNames = {
-  angry:
-    'bg-[color-mix(in_oklch,oklch(0.6_0.22_28)_18%,transparent)] shadow-[0_0_12px_oklch(0.6_0.22_28/15%),inset_0_0_0_1px_oklch(0.6_0.22_28/40%)]',
-  excited:
-    'bg-[color-mix(in_oklch,oklch(0.8_0.15_85)_16%,transparent)] shadow-[0_0_12px_oklch(0.8_0.15_85/15%),inset_0_0_0_1px_oklch(0.8_0.15_85/40%)]',
+  anxious:
+    'bg-[color-mix(in_oklch,oklch(0.72_0.14_205)_18%,transparent)] shadow-[0_0_12px_oklch(0.72_0.14_205/15%),inset_0_0_0_1px_oklch(0.72_0.14_205/40%)]',
+  done:
+    'bg-[color-mix(in_oklch,oklch(0.64_0.11_305)_18%,transparent)] shadow-[0_0_12px_oklch(0.64_0.11_305/15%),inset_0_0_0_1px_oklch(0.64_0.11_305/40%)]',
   happy:
     'bg-[color-mix(in_oklch,oklch(0.82_0.12_125)_16%,transparent)] shadow-[0_0_12px_oklch(0.82_0.12_125/15%),inset_0_0_0_1px_oklch(0.82_0.12_125/40%)]',
   neutral:
-    'bg-[color-mix(in_oklch,oklch(0.68_0.03_240)_18%,transparent)] shadow-[0_0_12px_oklch(0.68_0.03_240/15%),inset_0_0_0_1px_oklch(0.68_0.03_240/40%)]',
+    'bg-[color-mix(in_oklch,oklch(0.7_0.02_255)_18%,transparent)] shadow-[0_0_12px_oklch(0.7_0.02_255/12%),inset_0_0_0_1px_oklch(0.7_0.02_255/38%)]',
   sad:
-    'bg-[color-mix(in_oklch,oklch(0.65_0.16_230)_18%,transparent)] shadow-[0_0_12px_oklch(0.65_0.16_230/15%),inset_0_0_0_1px_oklch(0.65_0.16_230/40%)]',
-  tired:
-    'bg-[color-mix(in_oklch,oklch(0.62_0.14_290)_18%,transparent)] shadow-[0_0_12px_oklch(0.62_0.14_290/15%),inset_0_0_0_1px_oklch(0.62_0.14_290/40%)]',
+    'bg-[color-mix(in_oklch,oklch(0.68_0.13_265)_18%,transparent)] shadow-[0_0_12px_oklch(0.68_0.13_265/15%),inset_0_0_0_1px_oklch(0.68_0.13_265/40%)]',
 }
 
 const markdownPreviewClassName = cn(

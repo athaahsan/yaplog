@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { initialJournalEntries, moodOptions } from '../../data/journalSeed'
+import { moodOptions } from '../../data/journalConfig'
 import JournalEditor from './JournalEditor'
 import JournalTable from './JournalTable'
 import JournalToolbar from './JournalToolbar'
@@ -12,12 +12,11 @@ function toggleListValue(value, setter) {
   )
 }
 
-function JournalWorkspace() {
+function JournalWorkspace({ entries, onEntriesChange }) {
   const [journalMode, setJournalMode] = useState('table')
   const [editingEntryId, setEditingEntryId] = useState(null)
   const [entryDraft, setEntryDraft] = useState(null)
   const [selectedEntryIds, setSelectedEntryIds] = useState([])
-  const [journalEntries, setJournalEntries] = useState(initialJournalEntries)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMoods, setSelectedMoods] = useState([])
   const [createdDateRange, setCreatedDateRange] = useState()
@@ -35,7 +34,7 @@ function JournalWorkspace() {
     (favoriteFilter !== 'all' ? 1 : 0) +
     (hasDateRange(createdDateRange) ? 1 : 0) +
     (hasDateRange(updatedDateRange) ? 1 : 0)
-  const filteredEntries = journalEntries
+  const filteredEntries = entries
     .filter((entry) => {
       const matchesSearch = entry.title
         .toLowerCase()
@@ -109,8 +108,8 @@ function JournalWorkspace() {
   }
 
   function toggleFavorite(entryId) {
-    setJournalEntries((entries) =>
-      entries.map((entry) =>
+    onEntriesChange((currentEntries) =>
+      currentEntries.map((entry) =>
         entry.id === entryId ? { ...entry, favorite: !entry.favorite } : entry,
       ),
     )
@@ -128,8 +127,8 @@ function JournalWorkspace() {
   }
 
   function deleteSelectedEntries() {
-    setJournalEntries((entries) =>
-      entries.filter((entry) => !selectedEntryIds.includes(entry.id)),
+    onEntriesChange((currentEntries) =>
+      currentEntries.filter((entry) => !selectedEntryIds.includes(entry.id)),
     )
     setSelectedEntryIds([])
   }
@@ -181,10 +180,12 @@ function JournalWorkspace() {
       body: entryDraft.body.trim(),
     }
 
-    setJournalEntries((entries) =>
+    onEntriesChange((currentEntries) =>
       editingEntryId
-        ? entries.map((entry) => (entry.id === editingEntryId ? savedEntry : entry))
-        : [savedEntry, ...entries],
+        ? currentEntries.map((entry) =>
+            entry.id === editingEntryId ? savedEntry : entry,
+          )
+        : [savedEntry, ...currentEntries],
     )
     closeEditor()
   }

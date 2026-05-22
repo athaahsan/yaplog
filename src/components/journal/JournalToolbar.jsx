@@ -36,6 +36,7 @@ function JournalToolbar({
           variant="outline"
           size="default"
           type="button"
+          aria-label="Clear selection"
           className="rounded-lg"
           onClick={onClearSelection}
         >
@@ -46,6 +47,7 @@ function JournalToolbar({
           variant="destructive"
           size="default"
           type="button"
+          aria-label="Delete selected entries"
           className="ml-auto rounded-lg"
           onClick={onDeleteSelected}
         >
@@ -69,6 +71,7 @@ function JournalToolbar({
           )}
           aria-haspopup="dialog"
           aria-expanded={filterOpen}
+          aria-label="Open journal filters"
           onClick={onToggleFilter}
         >
           <SlidersHorizontal size={16} />
@@ -113,6 +116,7 @@ function JournalToolbar({
       <Button
         className="ml-auto rounded-lg"
         type="button"
+        aria-label="New journal entry"
         onClick={onNewEntry}
       >
         <Plus size={16} />

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  BookOpenText,
   CheckSquare,
   ChevronDown,
   Download,
@@ -10,6 +9,7 @@ import {
   Moon,
   NotebookPen,
   Sun,
+  Upload,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -51,6 +51,7 @@ function Sidebar({
   onSelectApp,
   onCloseSidebar,
   onExportData,
+  onImportData,
   sidebarOpen,
   theme,
   onThemeChange,
@@ -210,10 +211,10 @@ function Sidebar({
           </span>
           <span className="grid min-w-0">
             <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold">
-              Local user
+              Guest
             </span>
             <span className="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">
-              Phase one storage
+              Stored on this device
             </span>
           </span>
           <ChevronDown size={16} aria-hidden="true" />
@@ -233,6 +234,9 @@ function Sidebar({
             >
               <LogIn size={16} />
               <span>Sign in</span>
+              <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
+                Soon
+              </span>
             </Button>
             <Button
               className="h-auto justify-start gap-[9px] rounded-md p-2"
@@ -246,6 +250,19 @@ function Sidebar({
             >
               <Download size={16} />
               <span>Export data</span>
+            </Button>
+            <Button
+              className="h-auto justify-start gap-[9px] rounded-md p-2"
+              variant="ghost"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onImportData()
+                setUserMenuOpen(false)
+              }}
+            >
+              <Upload size={16} />
+              <span>Import data</span>
             </Button>
           </div>
         )}
