@@ -20,15 +20,21 @@ function JournalWorkspace() {
   const [journalEntries, setJournalEntries] = useState(initialJournalEntries)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMoods, setSelectedMoods] = useState([])
-  const [favoritedOnly, setFavoritedOnly] = useState(false)
+  const [createdDateRange, setCreatedDateRange] = useState()
+  const [favoriteFilter, setFavoriteFilter] = useState('all')
   const [filterOpen, setFilterOpen] = useState(false)
+  const [updatedDateRange, setUpdatedDateRange] = useState()
   const [sortConfig, setSortConfig] = useState({
     direction: 'desc',
     key: 'createdAt',
   })
   const filterRef = useRef(null)
 
-  const activeFilterCount = selectedMoods.length + (favoritedOnly ? 1 : 0)
+  const activeFilterCount =
+    selectedMoods.length +
+    (favoriteFilter !== 'all' ? 1 : 0) +
+    (hasDateRange(createdDateRange) ? 1 : 0) +
+    (hasDateRange(updatedDateRange) ? 1 : 0)
   const filteredEntries = journalEntries
     .filter((entry) => {
       const matchesSearch = entry.title
@@ -36,9 +42,20 @@ function JournalWorkspace() {
         .includes(searchQuery.trim().toLowerCase())
       const matchesMood =
         selectedMoods.length === 0 || selectedMoods.includes(entry.mood)
-      const matchesFavorite = !favoritedOnly || entry.favorite
+      const matchesFavorite =
+        favoriteFilter === 'all' ||
+        (favoriteFilter === 'favorited' && entry.favorite) ||
+        (favoriteFilter === 'unfavorited' && !entry.favorite)
+      const matchesCreatedDate = isDateInRange(entry.createdAt, createdDateRange)
+      const matchesUpdatedDate = isDateInRange(entry.updatedAt, updatedDateRange)
 
-      return matchesSearch && matchesMood && matchesFavorite
+      return (
+        matchesSearch &&
+        matchesMood &&
+        matchesFavorite &&
+        matchesCreatedDate &&
+        matchesUpdatedDate
+      )
     })
     .sort((firstEntry, secondEntry) => {
       const directionModifier = sortConfig.direction === 'asc' ? 1 : -1
@@ -63,7 +80,10 @@ function JournalWorkspace() {
 
   useEffect(() => {
     function handleOutsideClick(event) {
-      if (!filterRef.current?.contains(event.target)) {
+      if (
+        !filterRef.current?.contains(event.target) &&
+        !event.target.closest('[data-slot="popover-content"]')
+      ) {
         setFilterOpen(false)
       }
     }
@@ -98,7 +118,9 @@ function JournalWorkspace() {
 
   function clearFilters() {
     setSelectedMoods([])
-    setFavoritedOnly(false)
+    setCreatedDateRange(undefined)
+    setFavoriteFilter('all')
+    setUpdatedDateRange(undefined)
   }
 
   function clearSelection() {
@@ -180,31 +202,39 @@ function JournalWorkspace() {
   }
 
   return (
-    <div className="journal-view">
-      <header className="workspace-header">
+    <div className="min-w-0">
+      <header className="mb-[18px] flex items-end justify-between max-[720px]:mb-3.5">
         <div>
-          <p className="section-kicker">Workspace</p>
-          <h1>Journal</h1>
+          <p className="mb-1.5 text-[13px] font-semibold text-muted-foreground max-[720px]:text-[11px]">
+            Workspace
+          </p>
+          <h1 className="m-0 text-[30px] font-semibold leading-[1.1] tracking-normal text-foreground max-[720px]:text-[25px]">
+            Journal
+          </h1>
         </div>
       </header>
 
       <JournalToolbar
         activeFilterCount={activeFilterCount}
-        favoritedOnly={favoritedOnly}
+        createdDateRange={createdDateRange}
+        favoriteFilter={favoriteFilter}
         filterOpen={filterOpen}
         filterRef={filterRef}
         moodOptions={moodOptions}
         onClearSelection={clearSelection}
         onClearFilters={clearFilters}
+        onCreatedDateRangeChange={setCreatedDateRange}
         onDeleteSelected={deleteSelectedEntries}
-        onFavoritedOnlyChange={setFavoritedOnly}
+        onFavoriteFilterChange={setFavoriteFilter}
         onNewEntry={openNewEntry}
         onSearchChange={setSearchQuery}
         onToggleFilter={() => setFilterOpen((open) => !open)}
         onToggleMood={(mood) => toggleListValue(mood, setSelectedMoods)}
+        onUpdatedDateRangeChange={setUpdatedDateRange}
         searchQuery={searchQuery}
         selectedCount={selectedEntryIds.length}
         selectedMoods={selectedMoods}
+        updatedDateRange={updatedDateRange}
       />
 
       <JournalTable
@@ -220,6 +250,40 @@ function JournalWorkspace() {
       />
     </div>
   )
+}
+
+function hasDateRange(range) {
+  return Boolean(range?.from || range?.to)
+}
+
+function getStartOfDay(value) {
+  const date = new Date(value)
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+function getEndOfDay(value) {
+  const date = new Date(value)
+  date.setHours(23, 59, 59, 999)
+  return date
+}
+
+function isDateInRange(value, range) {
+  if (!hasDateRange(range)) {
+    return true
+  }
+
+  const date = new Date(value)
+
+  if (range.from && date < getStartOfDay(range.from)) {
+    return false
+  }
+
+  if (range.to && date > getEndOfDay(range.to)) {
+    return false
+  }
+
+  return true
 }
 
 export default JournalWorkspace

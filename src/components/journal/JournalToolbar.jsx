@@ -1,94 +1,123 @@
 import { Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import FilterPopover from './FilterPopover'
 
 function JournalToolbar({
   activeFilterCount,
-  favoritedOnly,
+  createdDateRange,
+  favoriteFilter,
   filterOpen,
   filterRef,
   moodOptions,
   onClearSelection,
   onClearFilters,
+  onCreatedDateRangeChange,
   onDeleteSelected,
-  onFavoritedOnlyChange,
+  onFavoriteFilterChange,
   onNewEntry,
   onSearchChange,
   onToggleFilter,
   onToggleMood,
+  onUpdatedDateRangeChange,
   searchQuery,
   selectedCount,
   selectedMoods,
+  updatedDateRange,
 }) {
   if (selectedCount > 0) {
     return (
-      <div className="journal-toolbar selection-toolbar">
-        <div className="selection-summary">
+      <div className="relative mb-3 grid grid-cols-[1fr_auto_auto] items-center gap-2 sm:flex">
+        <div className="flex h-9 items-center text-sm font-semibold text-foreground">
           <span>{selectedCount} selected</span>
         </div>
-        <button
-          className="toolbar-button"
+        <Button
+          variant="outline"
+          size="default"
           type="button"
+          className="rounded-lg"
           onClick={onClearSelection}
         >
           <X size={16} />
-          <span>Clear</span>
-        </button>
-        <button
-          className="delete-selection-button"
+          <span className="hidden sm:inline">Clear</span>
+        </Button>
+        <Button
+          variant="destructive"
+          size="default"
           type="button"
+          className="ml-auto rounded-lg"
           onClick={onDeleteSelected}
         >
           <Trash2 size={16} />
-          <span>Delete</span>
-        </button>
+          <span className="hidden sm:inline">Delete</span>
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="journal-toolbar">
-      <div className="filter-control" ref={filterRef}>
-        <button
-          className="toolbar-button"
+    <div className="relative mb-3 grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:flex">
+      <div className="relative" ref={filterRef}>
+        <Button
+          variant="outline"
+          size="default"
           type="button"
+          className={cn(
+            'relative rounded-lg',
+            activeFilterCount > 0 && 'bg-accent text-accent-foreground',
+          )}
           aria-haspopup="dialog"
           aria-expanded={filterOpen}
-          data-active={activeFilterCount > 0}
           onClick={onToggleFilter}
         >
           <SlidersHorizontal size={16} />
-          <span>Filter</span>
+          <span className="hidden sm:inline">Filter</span>
           {activeFilterCount > 0 && (
-            <span className="filter-count">{activeFilterCount}</span>
+            <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[11px] font-bold leading-none text-primary-foreground">
+              {activeFilterCount}
+            </span>
           )}
-        </button>
+        </Button>
 
         {filterOpen && (
           <FilterPopover
-            favoritedOnly={favoritedOnly}
+            createdDateRange={createdDateRange}
+            favoriteFilter={favoriteFilter}
             moodOptions={moodOptions}
             onClearFilters={onClearFilters}
-            onFavoritedOnlyChange={onFavoritedOnlyChange}
+            onCreatedDateRangeChange={onCreatedDateRangeChange}
+            onFavoriteFilterChange={onFavoriteFilterChange}
             onToggleMood={onToggleMood}
+            onUpdatedDateRangeChange={onUpdatedDateRangeChange}
             selectedMoods={selectedMoods}
+            updatedDateRange={updatedDateRange}
           />
         )}
       </div>
 
-      <label className="search-field">
-        <Search size={16} />
-        <input
+      <label className="relative flex min-w-0 flex-1 items-center sm:min-w-[220px] sm:max-w-[360px]">
+        <Search
+          className="pointer-events-none absolute left-3 text-muted-foreground"
+          size={16}
+        />
+        <Input
           type="search"
           placeholder="Search title..."
+          className="h-9 rounded-lg bg-card pl-9 shadow-none"
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
         />
       </label>
 
-      <button className="new-entry-button" type="button" onClick={onNewEntry}>
+      <Button
+        className="ml-auto rounded-lg"
+        type="button"
+        onClick={onNewEntry}
+      >
         <Plus size={16} />
-        <span>New</span>
-      </button>
+        <span className="hidden sm:inline">New</span>
+      </Button>
     </div>
   )
 }

@@ -13,9 +13,25 @@ function applyTheme(theme) {
   document.documentElement.style.colorScheme = shouldUseDark ? 'dark' : 'light'
 }
 
+function applyFont(font) {
+  const fontStacks = {
+    default: "'Geist Variable', sans-serif",
+    serif: "'Lora', serif",
+    mono: "'Space Mono', monospace",
+  }
+
+  document.documentElement.style.setProperty(
+    '--app-font-family',
+    fontStacks[font] || fontStacks.default,
+  )
+}
+
 function App() {
   const [activeApp, setActiveApp] = useState('Journal')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [font, setFont] = useState(
+    () => localStorage.getItem('yaplog-font') || 'default',
+  )
   const [theme, setTheme] = useState(
     () => localStorage.getItem('yaplog-theme') || 'system',
   )
@@ -34,6 +50,11 @@ function App() {
     media.addEventListener('change', handleSystemThemeChange)
     return () => media.removeEventListener('change', handleSystemThemeChange)
   }, [theme])
+
+  useEffect(() => {
+    localStorage.setItem('yaplog-font', font)
+    applyFont(font)
+  }, [font])
 
   useEffect(() => {
     function handleEscape(event) {
@@ -80,7 +101,7 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="grid h-dvh grid-cols-[264px_1fr] overflow-hidden bg-background text-foreground max-[720px]:block max-[720px]:min-h-dvh max-[720px]:w-full max-[720px]:max-w-full max-[720px]:overflow-x-hidden max-[720px]:overflow-y-hidden">
       <MobileHeader
         sidebarOpen={sidebarOpen}
         onOpenSidebar={() => setSidebarOpen(true)}
@@ -88,7 +109,7 @@ function App() {
 
       {sidebarOpen && (
         <button
-          className="sidebar-backdrop"
+          className="hidden max-[720px]:fixed max-[720px]:inset-0 max-[720px]:z-40 max-[720px]:block max-[720px]:border-0 max-[720px]:bg-black/35"
           type="button"
           aria-label="Close sidebar"
           onClick={() => setSidebarOpen(false)}
@@ -97,15 +118,20 @@ function App() {
 
       <Sidebar
         activeApp={activeApp}
+        font={font}
         onCloseSidebar={() => setSidebarOpen(false)}
         onExportData={exportData}
+        onFontChange={setFont}
         onSelectApp={selectApp}
         onThemeChange={setTheme}
         sidebarOpen={sidebarOpen}
         theme={theme}
       />
 
-      <section className="workspace" aria-label="YapLog workspace">
+      <section
+        className="h-dvh min-w-0 overflow-hidden p-7 max-[720px]:h-[calc(100dvh-56px)] max-[720px]:min-h-0 max-[720px]:w-full max-[720px]:max-w-dvw max-[720px]:overflow-hidden max-[720px]:p-4 max-[720px]:px-3 max-[720px]:[contain:layout_paint]"
+        aria-label="YapLog workspace"
+      >
         {activeApp === 'Journal' ? (
           <JournalWorkspace />
         ) : (

@@ -1,4 +1,6 @@
 import { ArrowDownUp, ChevronDown, ChevronUp, Star } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { formatDateTime } from '../../lib/dateTime'
 
 const sortableColumns = {
@@ -6,6 +8,15 @@ const sortableColumns = {
   title: 'Title',
   updatedAt: 'Last edited time',
 }
+
+const checkboxClassName =
+  "grid size-[17px] appearance-none place-items-center rounded border border-muted-foreground/35 bg-muted/20 after:size-[9px] after:rounded-[2px] after:bg-transparent after:content-[''] checked:border-muted-foreground/50 checked:bg-muted/20 checked:after:bg-foreground/60"
+
+const headerCellClassName =
+  'sticky top-0 z-20 h-10 whitespace-nowrap border-b border-border bg-background px-3.5 text-left align-middle text-xs font-semibold text-muted-foreground'
+
+const bodyCellClassName =
+  'h-[46px] whitespace-nowrap border-b border-border px-3.5 align-middle'
 
 function JournalTable({
   allEntriesSelected,
@@ -27,16 +38,25 @@ function JournalTable({
       : ArrowDownUp
 
     return (
-      <button
-        className="sortable-header-button"
+      <Button
+        variant="ghost"
+        size="xs"
         type="button"
         aria-label={`Sort by ${sortableColumns[key]}`}
-        data-active={isActive}
+        className={cn(
+          'h-auto gap-1.5 rounded-none p-0 text-xs font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground',
+          isActive && 'text-foreground',
+        )}
         onClick={() => onUpdateSort(key)}
       >
         <span>{sortableColumns[key]}</span>
-        <SortIcon size={13} />
-      </button>
+        <SortIcon
+          className={cn(
+            'size-[13px] opacity-65',
+            isActive && 'opacity-100',
+          )}
+        />
+      </Button>
     )
   }
 
@@ -49,92 +69,142 @@ function JournalTable({
   }
 
   return (
-    <div className="journal-table-wrap">
-      <table className="journal-table">
+    <div className="relative max-h-[calc(100dvh-174px)] overflow-auto rounded-lg border border-border bg-background [contain:layout_paint] [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_55%,transparent)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-track]:bg-transparent">
+      <table className="w-full min-w-[760px] border-collapse text-sm text-foreground">
         <thead>
           <tr>
-            <th className="select-column">
+            <th
+              className={cn(
+                headerCellClassName,
+                'left-0 z-40 w-11 cursor-pointer',
+              )}
+              onClick={onToggleSelectAll}
+            >
               <input
                 type="checkbox"
                 aria-label="Select all journal entries"
                 checked={allEntriesSelected}
+                className={checkboxClassName}
                 onChange={onToggleSelectAll}
+                onClick={(event) => event.stopPropagation()}
               />
             </th>
-            <th aria-sort={getSortDirection('title')}>
+            <th
+              className={headerCellClassName}
+              aria-sort={getSortDirection('title')}
+            >
               {renderSortableHeader('title')}
             </th>
-            <th>Mood</th>
-            <th aria-sort={getSortDirection('createdAt')}>
+            <th className={headerCellClassName}>Mood</th>
+            <th
+              className={headerCellClassName}
+              aria-sort={getSortDirection('createdAt')}
+            >
               {renderSortableHeader('createdAt')}
             </th>
-            <th aria-sort={getSortDirection('updatedAt')}>
+            <th
+              className={headerCellClassName}
+              aria-sort={getSortDirection('updatedAt')}
+            >
               {renderSortableHeader('updatedAt')}
             </th>
-            <th className="favorite-column">
+            <th className={cn(headerCellClassName, 'w-12 text-center')}>
               <span className="sr-only">Favorite</span>
             </th>
           </tr>
         </thead>
         <tbody>
-          {entries.map((entry) => (
-            <tr
-              className="journal-row"
-              key={entry.id}
-              tabIndex={0}
-              onClick={() => onOpenEntry(entry)}
-            >
-              <td
-                className="select-column"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onToggleEntrySelection(entry.id)
-                }}
+          {entries.map((entry) => {
+            const selected = selectedEntryIds.includes(entry.id)
+
+            return (
+              <tr
+                className="group cursor-pointer outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground"
+                key={entry.id}
+                tabIndex={0}
+                onClick={() => onOpenEntry(entry)}
               >
-                <input
-                  type="checkbox"
-                  aria-label={`Select ${entry.title}`}
-                  checked={selectedEntryIds.includes(entry.id)}
-                  onChange={(event) => {
+                <td
+                  className={cn(
+                    bodyCellClassName,
+                    'sticky left-0 z-30 w-11 cursor-pointer bg-background group-hover:bg-accent group-focus-visible:bg-accent',
+                  )}
+                  onClick={(event) => {
                     event.stopPropagation()
                     onToggleEntrySelection(entry.id)
                   }}
-                  onClick={(event) => event.stopPropagation()}
-                />
-              </td>
-              <td className="entry-title">{entry.title}</td>
-              <td>
-                <span className="mood-tag" aria-label="Mood">
-                  {entry.mood}
-                </span>
-              </td>
-              <td>{formatDateTime(entry.createdAt)}</td>
-              <td>{formatDateTime(entry.updatedAt)}</td>
-              <td className="favorite-column">
-                <button
-                  className="favorite-button"
-                  type="button"
-                  aria-label={
-                    entry.favorite
-                      ? `Remove ${entry.title} from favorites`
-                      : `Add ${entry.title} to favorites`
-                  }
-                  aria-pressed={entry.favorite}
-                  data-active={entry.favorite}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onToggleFavorite(entry.id)
-                  }}
                 >
-                  <Star size={17} fill="currentColor" />
-                </button>
-              </td>
-            </tr>
-          ))}
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${entry.title}`}
+                    checked={selected}
+                    className={checkboxClassName}
+                    onChange={(event) => {
+                      event.stopPropagation()
+                      onToggleEntrySelection(entry.id)
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                </td>
+                <td
+                  className={cn(
+                    bodyCellClassName,
+                    'w-[36%] min-w-60 font-medium text-foreground group-hover:text-inherit group-focus-visible:text-inherit',
+                  )}
+                >
+                  {entry.title}
+                </td>
+                <td className={bodyCellClassName}>
+                  <span
+                    className="inline-grid size-7 place-items-center text-base leading-none"
+                    aria-label="Mood"
+                  >
+                    {entry.mood}
+                  </span>
+                </td>
+                <td className={bodyCellClassName}>
+                  {formatDateTime(entry.createdAt)}
+                </td>
+                <td className={bodyCellClassName}>
+                  {formatDateTime(entry.updatedAt)}
+                </td>
+                <td className={cn(bodyCellClassName, 'w-12 text-center')}>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    type="button"
+                    aria-label={
+                      entry.favorite
+                        ? `Remove ${entry.title} from favorites`
+                        : `Add ${entry.title} to favorites`
+                    }
+                    aria-pressed={entry.favorite}
+                    className={cn(
+                      'rounded-md text-muted-foreground hover:bg-transparent hover:text-foreground',
+                      entry.favorite && 'text-foreground',
+                    )}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onToggleFavorite(entry.id)
+                    }}
+                  >
+                    <Star
+                      className={cn(
+                        'size-[17px]',
+                        entry.favorite ? 'fill-current' : 'fill-transparent',
+                      )}
+                    />
+                  </Button>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
       {entries.length === 0 && (
-        <div className="table-empty-state">No entries found.</div>
+        <div className="grid min-h-30 place-items-center border-t border-border text-sm text-muted-foreground">
+          No entries found.
+        </div>
       )}
     </div>
   )
