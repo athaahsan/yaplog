@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Save, Star } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Sparkles, Star } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
+import {
+  TITLE_WORD_THRESHOLD,
+  countWords,
+  requestJournalAssistant,
+} from '@/lib/journalAssistant'
 import { cn } from '@/lib/utils'
+import JournalContentAssistant from './JournalContentAssistant'
 
 const moodNameMap = {
   '😊': 'happy',
@@ -33,7 +39,7 @@ const markdownPreviewClassName = cn(
   '[&_h1]:mb-[0.45em] [&_h1]:mt-[1.15em] [&_h1]:text-[1.55em] [&_h1]:leading-[1.2]',
   '[&_h2]:mb-[0.45em] [&_h2]:mt-[1.15em] [&_h2]:text-[1.3em] [&_h2]:leading-[1.2]',
   '[&_h3]:mb-[0.45em] [&_h3]:mt-[1.15em] [&_h3]:text-[1.12em] [&_h3]:leading-[1.2]',
-  '[&_ol]:mb-[0.9em] [&_ol]:pl-[1.35em] [&_p]:mb-[0.9em] [&_pre]:mb-[0.9em] [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-[0.9em] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:mb-[0.9em] [&_ul]:mb-[0.9em] [&_ul]:pl-[1.35em]',
+  '[&_ol]:mb-[0.9em] [&_ol]:pl-[1.35em] [&_p]:mb-[0.9em] [&_p]:whitespace-pre-line [&_pre]:mb-[0.9em] [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-[0.9em] [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:mb-[0.9em] [&_ul]:mb-[0.9em] [&_ul]:pl-[1.35em]',
   '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
 )
 
@@ -45,7 +51,23 @@ function JournalEditor({
   onUpdateDraft,
 }) {
   const bodyInputRef = useRef(null)
+  const latestTitleRef = useRef(draft.title)
+  const titleRequestIdRef = useRef(0)
+  const updateDraftRef = useRef(onUpdateDraft)
   const [isBodyEditing, setIsBodyEditing] = useState(false)
+  const [titleStatus, setTitleStatus] = useState('idle')
+  const [titleError, setTitleError] = useState('')
+  const bodyWordCount = countWords(draft.body)
+  const canSuggestTitle =
+    !draft.title.trim() && bodyWordCount >= TITLE_WORD_THRESHOLD
+
+  useEffect(() => {
+    latestTitleRef.current = draft.title
+  }, [draft.title])
+
+  useEffect(() => {
+    updateDraftRef.current = onUpdateDraft
+  }, [onUpdateDraft])
 
   useEffect(() => {
     const bodyInput = bodyInputRef.current
@@ -70,8 +92,44 @@ function JournalEditor({
     bodyInput.selectionEnd = bodyInput.value.length
   }, [isBodyEditing])
 
+  async function suggestTitle() {
+    const body = draft.body.trim()
+
+    if (!canSuggestTitle || titleStatus === 'loading') {
+      return
+    }
+
+    const requestId = titleRequestIdRef.current + 1
+    titleRequestIdRef.current = requestId
+    setTitleStatus('loading')
+    setTitleError('')
+
+    try {
+      const result = await requestJournalAssistant({
+        action: 'title',
+        content: body,
+      })
+
+      const nextTitle = result.title?.trim()
+      const titleStillEmpty = !latestTitleRef.current.trim()
+      const requestStillCurrent = titleRequestIdRef.current === requestId
+
+      if (nextTitle && titleStillEmpty && requestStillCurrent) {
+        updateDraftRef.current('title', nextTitle)
+        setTitleStatus('idle')
+      } else if (requestStillCurrent) {
+        setTitleStatus('idle')
+      }
+    } catch (requestError) {
+      if (titleRequestIdRef.current === requestId) {
+        setTitleStatus('error')
+        setTitleError(requestError.message || 'Could not suggest a title.')
+      }
+    }
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="relative flex h-full min-h-0 flex-col">
       <header className="mb-[30px] flex items-center justify-between max-md:mb-[22px]">
         <Button
           variant="ghost"
@@ -114,13 +172,61 @@ function JournalEditor({
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1 pt-2 [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_55%,transparent)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-track]:bg-transparent">
-        <input
-          className="w-full bg-transparent text-[40px] font-bold leading-[1.1] tracking-normal text-foreground outline-none placeholder:text-muted-foreground max-md:text-[30px]"
-          type="text"
-          value={draft.title}
-          placeholder="Untitled entry"
-          onChange={(event) => onUpdateDraft('title', event.target.value)}
-        />
+        <div className="grid gap-1.5">
+          <div className="flex min-w-0 items-center">
+            <div
+              className={cn(
+                'flex flex-none items-center overflow-hidden transition-[width,margin-right,opacity,transform] duration-200 ease-out',
+                canSuggestTitle
+                  ? 'mr-1.5 w-8 translate-x-0 opacity-100'
+                  : 'mr-0 w-0 -translate-x-1 opacity-0',
+              )}
+              aria-hidden={!canSuggestTitle}
+            >
+              <Button
+                className={cn(
+                  'size-8 rounded-lg text-muted-foreground hover:text-foreground',
+                  titleStatus === 'error' && 'text-destructive hover:text-destructive',
+                )}
+                variant="ghost"
+                size="icon-sm"
+                type="button"
+                aria-label={
+                  titleStatus === 'error' ? 'Try suggesting a title again' : 'Suggest title'
+                }
+                disabled={!canSuggestTitle || titleStatus === 'loading'}
+                tabIndex={canSuggestTitle ? 0 : -1}
+                onClick={suggestTitle}
+                title={titleStatus === 'error' ? 'Try again' : 'Suggest title'}
+              >
+                {titleStatus === 'loading' ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="size-3.5" />
+                )}
+              </Button>
+            </div>
+
+            <input
+              className={cn(
+                'min-w-0 bg-transparent py-2 text-[40px] font-bold leading-[1.35] tracking-normal text-foreground outline-none transition-[width] duration-200 ease-out placeholder:text-muted-foreground max-md:text-[30px] max-md:leading-[1.35]',
+                'w-full',
+              )}
+              type="text"
+              value={draft.title}
+              placeholder="Untitled entry"
+              onChange={(event) => {
+                setTitleError('')
+                setTitleStatus('idle')
+                onUpdateDraft('title', event.target.value)
+              }}
+            />
+          </div>
+
+          {titleError && canSuggestTitle && (
+            <span className="text-xs text-muted-foreground">{titleError}</span>
+          )}
+        </div>
 
         <div className="flex w-fit max-w-full items-center gap-2" aria-label="Entry mood">
           {moodOptions.map((mood) => {
@@ -155,7 +261,10 @@ function JournalEditor({
           })}
         </div>
 
-        <div className="mb-3 mt-0.5 h-0 w-full flex-none border-t border-muted-foreground/25" aria-hidden="true" />
+        <JournalContentAssistant
+          onApplyContent={(content) => onUpdateDraft('body', content)}
+          body={draft.body}
+        />
 
         {isBodyEditing ? (
           <textarea
