@@ -5,7 +5,7 @@ const LEGACY_FONT_KEY = 'yaplog-font'
 
 const validThemes = new Set(['light', 'dark', 'system'])
 const validFonts = new Set(['default', 'serif', 'mono'])
-const validMoods = new Set(['😊', '😐', '😔', '🫩', '😰'])
+const validMoods = new Set(['😊', '😐', '😔', '🫩', '😰', '😡'])
 const defaultMood = '😐'
 
 function nowIso() {

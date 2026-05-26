@@ -1,4 +1,4 @@
-import { Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import { Download, Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,7 @@ function JournalToolbar({
   onClearFilters,
   onCreatedDateRangeChange,
   onDeleteSelected,
+  onDownloadSelected,
   onFavoriteFilterChange,
   onNewEntry,
   onSearchChange,
@@ -28,7 +29,7 @@ function JournalToolbar({
 }) {
   if (selectedCount > 0) {
     return (
-      <div className="relative mb-3 grid grid-cols-[1fr_auto_auto] items-center gap-2 sm:flex">
+      <div className="relative mb-3 grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 sm:flex">
         <div className="flex h-9 items-center text-sm font-semibold text-foreground">
           <span>{selectedCount} selected</span>
         </div>
@@ -44,11 +45,22 @@ function JournalToolbar({
           <span className="hidden sm:inline">Clear</span>
         </Button>
         <Button
+          variant="secondary"
+          size="default"
+          type="button"
+          aria-label="Download selected entries as markdown"
+          className="rounded-lg sm:ml-auto"
+          onClick={onDownloadSelected}
+        >
+          <Download size={16} />
+          <span className="hidden sm:inline">Download</span>
+        </Button>
+        <Button
           variant="destructive"
           size="default"
           type="button"
           aria-label="Delete selected entries"
-          className="ml-auto rounded-lg"
+          className="rounded-lg"
           onClick={onDeleteSelected}
         >
           <Trash2 size={16} />

@@ -5,6 +5,8 @@ import {
   Download,
   FileText,
   Laptop,
+  LogIn,
+  LogOut,
   Moon,
   NotebookPen,
   Sun,
@@ -44,6 +46,9 @@ const fontOptions = [
   },
 ]
 
+const userMenuItemClassName =
+  'h-auto justify-start gap-[9px] rounded-md p-2 text-popover-foreground hover:bg-muted hover:text-popover-foreground disabled:pointer-events-none disabled:opacity-70'
+
 function GoogleIcon(props) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
@@ -69,18 +74,29 @@ function GoogleIcon(props) {
 
 function Sidebar({
   activeApp,
+  authLoading,
+  authProfile,
   font,
   onSelectApp,
   onCloseSidebar,
   onExportData,
   onImportData,
+  onSignIn,
+  onSignOut,
   sidebarOpen,
   theme,
   onThemeChange,
   onFontChange,
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState('')
   const userMenuRef = useRef(null)
+  const signedIn = Boolean(authProfile)
+  const displayName = authProfile?.userName || 'Guest'
+  const displaySubtitle = signedIn
+    ? authProfile?.userEmail || 'Synced to cloud'
+    : 'Stored on this device'
+  const displayInitial = displayName.trim().charAt(0).toUpperCase() || 'Y'
 
   useEffect(() => {
     function handleOutsideClick(event) {
@@ -226,17 +242,27 @@ function Sidebar({
           onClick={() => setUserMenuOpen((open) => !open)}
         >
           <span
-            className="grid size-9 place-items-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
+            className="grid size-9 place-items-center overflow-hidden rounded-full bg-secondary text-sm font-bold text-secondary-foreground"
             aria-hidden="true"
           >
-            Y
+            {authProfile?.avatarUrl &&
+            failedAvatarUrl !== authProfile.avatarUrl ? (
+              <img
+                className="size-full object-cover"
+                src={authProfile.avatarUrl}
+                alt=""
+                onError={() => setFailedAvatarUrl(authProfile.avatarUrl)}
+              />
+            ) : (
+              displayInitial
+            )}
           </span>
           <span className="grid min-w-0">
             <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold">
-              Guest
+              {displayName}
             </span>
             <span className="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">
-              Stored on this device
+              {displaySubtitle}
             </span>
           </span>
           <ChevronDown size={16} aria-hidden="true" />
@@ -247,18 +273,27 @@ function Sidebar({
             className="absolute inset-x-3 bottom-[calc(100%+8px)] grid gap-1 rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-[0_16px_40px_oklch(0_0_0/14%)]"
             role="menu"
           >
+            {!signedIn && (
+              <Button
+                className={userMenuItemClassName}
+                variant="ghost"
+                type="button"
+                disabled={authLoading}
+                role="menuitem"
+                onClick={() => {
+                  onSignIn()
+                  setUserMenuOpen(false)
+                }}
+              >
+                <LogIn size={16} />
+                <span className="font-semibold">
+                  {authLoading ? 'Checking...' : 'Sign in'}
+                </span>
+                <GoogleIcon className="ml-auto size-4" />
+              </Button>
+            )}
             <Button
-              className="h-auto justify-start gap-2.5 rounded-md border border-border bg-background p-2.5 text-foreground opacity-100 hover:bg-muted disabled:pointer-events-none disabled:opacity-100"
-              variant="outline"
-              type="button"
-              disabled
-              role="menuitem"
-            >
-              <GoogleIcon className="size-4" />
-              <span className="font-semibold">Sign in</span>
-            </Button>
-            <Button
-              className="h-auto justify-start gap-[9px] rounded-md p-2"
+              className={userMenuItemClassName}
               variant="ghost"
               type="button"
               role="menuitem"
@@ -271,7 +306,7 @@ function Sidebar({
               <span>Export data</span>
             </Button>
             <Button
-              className="h-auto justify-start gap-[9px] rounded-md p-2"
+              className={userMenuItemClassName}
               variant="ghost"
               type="button"
               role="menuitem"
@@ -283,6 +318,21 @@ function Sidebar({
               <Upload size={16} />
               <span>Import data</span>
             </Button>
+            {signedIn && (
+              <Button
+                className={userMenuItemClassName}
+                variant="ghost"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onSignOut()
+                  setUserMenuOpen(false)
+                }}
+              >
+                <LogOut size={16} />
+                <span>Sign out</span>
+              </Button>
+            )}
           </div>
         )}
       </footer>

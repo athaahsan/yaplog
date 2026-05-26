@@ -17,9 +17,12 @@ const moodNameMap = {
   '😔': 'sad',
   '🫩': 'done',
   '😰': 'anxious',
+  '😡': 'angry',
 }
 
 const moodToneClassNames = {
+  angry:
+    'bg-[color-mix(in_oklch,oklch(0.66_0.19_35)_18%,transparent)] shadow-[0_0_12px_oklch(0.66_0.19_35/15%),inset_0_0_0_1px_oklch(0.66_0.19_35/40%)]',
   anxious:
     'bg-[color-mix(in_oklch,oklch(0.72_0.14_205)_18%,transparent)] shadow-[0_0_12px_oklch(0.72_0.14_205/15%),inset_0_0_0_1px_oklch(0.72_0.14_205/40%)]',
   done:

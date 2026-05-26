@@ -1,1 +1,1 @@
-export const moodOptions = ['😊', '😐', '😔', '🫩', '😰']
+export const moodOptions = ['😊', '😐', '😔', '🫩', '😰', '😡']

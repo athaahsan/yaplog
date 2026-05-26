@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import MobileHeader from './components/layout/MobileHeader'
 import Sidebar from './components/layout/Sidebar'
@@ -12,6 +12,16 @@ import {
   saveMasterData,
   touchMasterData,
 } from './lib/masterData'
+import { hasSupabaseConfig } from './lib/supabaseClient'
+import {
+  fetchUserData,
+  getCurrentSession,
+  getUserProfile,
+  onAuthStateChange,
+  signInWithGoogle,
+  signOut,
+  upsertUserData,
+} from './lib/yaplogUserData'
 import './App.css'
 
 function applyTheme(theme) {
@@ -39,11 +49,67 @@ function App() {
   const [activeApp, setActiveApp] = useState('Journal')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [masterData, setMasterData] = useState(() => loadMasterData())
+  const [authUser, setAuthUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(() => hasSupabaseConfig())
+  const [cloudReady, setCloudReady] = useState(false)
+  const [pendingAuthChoice, setPendingAuthChoice] = useState(null)
+  const [authError, setAuthError] = useState('')
   const [pendingImport, setPendingImport] = useState(null)
   const [importError, setImportError] = useState('')
   const importInputRef = useRef(null)
+  const cloudSaveTimeoutRef = useRef(null)
   const font = masterData.settings.font
   const theme = masterData.settings.theme
+  const authProfile = authUser ? getUserProfile(authUser) : null
+
+  const prepareSignedInUser = useCallback(async (user) => {
+    setAuthLoading(true)
+    setAuthError('')
+
+    try {
+      const localData = loadMasterData()
+      const cloudRow = await fetchUserData(user.id)
+
+      setAuthUser(user)
+
+      if (!cloudRow) {
+        const nextCloudData = touchMasterData(localData)
+        const savedCloudData = await upsertUserData(user, nextCloudData)
+
+        setPendingAuthChoice(null)
+        setMasterData(savedCloudData)
+        setCloudReady(true)
+        return
+      }
+
+      const cloudData = normalizeMasterData(cloudRow.master_data)
+      const shouldAskAboutLocalData =
+        hasMeaningfulMasterData(localData) &&
+        !areMasterDataEquivalent(localData, cloudData)
+
+      setMasterData(cloudData)
+
+      if (shouldAskAboutLocalData) {
+        setPendingAuthChoice({
+          cloudData,
+          localData,
+          user,
+        })
+        setCloudReady(false)
+      } else {
+        setPendingAuthChoice(null)
+        setCloudReady(true)
+      }
+    } catch (error) {
+      setAuthError(error.message || 'Could not load your cloud data.')
+      setAuthUser(null)
+      setCloudReady(false)
+      setPendingAuthChoice(null)
+      setMasterData(loadMasterData())
+    } finally {
+      setAuthLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     applyTheme(theme)
@@ -64,8 +130,83 @@ function App() {
   }, [font])
 
   useEffect(() => {
+    if (!hasSupabaseConfig()) {
+      return undefined
+    }
+
+    let active = true
+
+    async function initializeAuth() {
+      try {
+        const session = await getCurrentSession()
+
+        if (!active) {
+          return
+        }
+
+        if (session?.user) {
+          await prepareSignedInUser(session.user)
+        } else {
+          setAuthUser(null)
+          setCloudReady(false)
+          setPendingAuthChoice(null)
+          setAuthLoading(false)
+        }
+      } catch (error) {
+        if (active) {
+          setAuthError(error.message || 'Could not initialize sign in.')
+          setAuthLoading(false)
+        }
+      }
+    }
+
+    initializeAuth()
+
+    const unsubscribe = onAuthStateChange((event, session) => {
+      if (!active) {
+        return
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setAuthUser(null)
+        setCloudReady(false)
+        setPendingAuthChoice(null)
+        setMasterData(loadMasterData())
+        setAuthLoading(false)
+        return
+      }
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        prepareSignedInUser(session.user)
+      }
+    })
+
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [prepareSignedInUser])
+
+  useEffect(() => {
+    window.clearTimeout(cloudSaveTimeoutRef.current)
+
+    if (authLoading || pendingAuthChoice) {
+      return undefined
+    }
+
+    if (authUser && cloudReady) {
+      cloudSaveTimeoutRef.current = window.setTimeout(() => {
+        upsertUserData(authUser, masterData).catch((error) => {
+          setAuthError(error.message || 'Could not sync your cloud data.')
+        })
+      }, 400)
+
+      return () => window.clearTimeout(cloudSaveTimeoutRef.current)
+    }
+
     saveMasterData(masterData)
-  }, [masterData])
+    return undefined
+  }, [authLoading, authUser, cloudReady, masterData, pendingAuthChoice])
 
   useEffect(() => {
     function handleEscape(event) {
@@ -110,6 +251,73 @@ function App() {
         },
       }
     })
+  }
+
+  async function signIn() {
+    setAuthError('')
+
+    try {
+      await signInWithGoogle()
+    } catch (error) {
+      setAuthError(error.message || 'Could not start Google sign in.')
+    }
+  }
+
+  async function signOutUser() {
+    setAuthError('')
+
+    try {
+      await signOut()
+      setAuthUser(null)
+      setCloudReady(false)
+      setPendingAuthChoice(null)
+      setMasterData(loadMasterData())
+    } catch (error) {
+      setAuthError(error.message || 'Could not sign out.')
+    }
+  }
+
+  function useCloudData() {
+    setMasterData(pendingAuthChoice.cloudData)
+    setCloudReady(true)
+    setPendingAuthChoice(null)
+  }
+
+  async function mergeLocalIntoCloud() {
+    try {
+      const mergedData = mergeMasterData(
+        pendingAuthChoice.cloudData,
+        pendingAuthChoice.localData,
+      )
+      const savedCloudData = await upsertUserData(
+        pendingAuthChoice.user,
+        mergedData,
+      )
+
+      setMasterData(savedCloudData)
+      setCloudReady(true)
+      setPendingAuthChoice(null)
+    } catch (error) {
+      setAuthError(error.message || 'Could not merge guest data into cloud.')
+    }
+  }
+
+  async function replaceCloudWithLocal() {
+    try {
+      const replacementData = touchMasterData(
+        normalizeMasterData(pendingAuthChoice.localData),
+      )
+      const savedCloudData = await upsertUserData(
+        pendingAuthChoice.user,
+        replacementData,
+      )
+
+      setMasterData(savedCloudData)
+      setCloudReady(true)
+      setPendingAuthChoice(null)
+    } catch (error) {
+      setAuthError(error.message || 'Could not replace cloud data.')
+    }
   }
 
   function exportData() {
@@ -191,12 +399,16 @@ function App() {
 
       <Sidebar
         activeApp={activeApp}
+        authLoading={authLoading}
+        authProfile={authProfile}
         font={font}
         onCloseSidebar={() => setSidebarOpen(false)}
         onExportData={exportData}
         onImportData={openImportPicker}
         onFontChange={(value) => updateSetting('font', value)}
         onSelectApp={selectApp}
+        onSignIn={signIn}
+        onSignOut={signOutUser}
         onThemeChange={(value) => updateSetting('theme', value)}
         sidebarOpen={sidebarOpen}
         theme={theme}
@@ -242,6 +454,57 @@ function App() {
         </div>
       )}
 
+      {authError && (
+        <div
+          className="fixed bottom-4 left-4 z-[70] flex max-w-sm items-start gap-2 rounded-lg border border-destructive/35 bg-popover p-3 text-sm text-popover-foreground shadow-lg"
+          role="alert"
+        >
+          <AlertTriangle className="mt-0.5 size-4 text-destructive" />
+          <span>{authError}</span>
+          <Button
+            className="ml-auto h-auto p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+            variant="ghost"
+            type="button"
+            onClick={() => setAuthError('')}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
+      {pendingAuthChoice && (
+        <div
+          className="fixed inset-0 z-[85] grid place-items-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="auth-data-dialog-title"
+        >
+          <div className="w-full max-w-[460px] rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl">
+            <h2
+              className="text-lg font-semibold text-foreground"
+              id="auth-data-dialog-title"
+            >
+              Choose your YapLog data
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              This device has guest data, and your Google account already has
+              cloud data. Choose which one to use for this signed-in workspace.
+            </p>
+            <div className="mt-4 grid gap-2">
+              <Button type="button" onClick={useCloudData}>
+                Use cloud data
+              </Button>
+              <Button type="button" variant="secondary" onClick={mergeLocalIntoCloud}>
+                Merge guest into cloud
+              </Button>
+              <Button type="button" variant="ghost" onClick={replaceCloudWithLocal}>
+                Replace cloud with guest data
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {pendingImport && (
         <div
           className="fixed inset-0 z-[80] grid place-items-center bg-black/45 p-4"
@@ -276,6 +539,31 @@ function App() {
       )}
     </main>
   )
+}
+
+function hasMeaningfulMasterData(masterData) {
+  return Boolean(
+    masterData?.journal?.entries?.length ||
+      masterData?.tasks?.items?.length ||
+      masterData?.memos?.items?.length,
+  )
+}
+
+function areMasterDataEquivalent(firstMasterData, secondMasterData) {
+  const first = normalizeMasterData(firstMasterData)
+  const second = normalizeMasterData(secondMasterData)
+
+  return JSON.stringify({
+    settings: first.settings,
+    journal: first.journal,
+    tasks: first.tasks,
+    memos: first.memos,
+  }) === JSON.stringify({
+    settings: second.settings,
+    journal: second.journal,
+    tasks: second.tasks,
+    memos: second.memos,
+  })
 }
 
 export default App

@@ -159,7 +159,7 @@ function JournalContentAssistant({ body, onApplyContent }) {
             )}
 
             {assistantStatus === 'success' && (
-              <div className="-mx-2 min-w-0 max-w-full whitespace-pre-wrap break-words rounded-md bg-muted/40 px-2 py-1 text-[17px] leading-[1.65] [overflow-wrap:anywhere]">
+              <div className="min-w-0 max-w-full whitespace-pre-wrap break-words bg-muted/40 py-1 text-[17px] leading-[1.65] [overflow-wrap:anywhere]">
                 {suggestedContent}
               </div>
             )}

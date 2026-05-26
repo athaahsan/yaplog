@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { moodOptions } from '../../data/journalConfig'
+import {
+  downloadMarkdownEntriesZip,
+  downloadMarkdownEntry,
+} from '../../lib/journalExport'
 import JournalEditor from './JournalEditor'
 import JournalTable from './JournalTable'
 import JournalToolbar from './JournalToolbar'
@@ -134,6 +138,21 @@ function JournalWorkspace({ entries, onEntriesChange }) {
     setSelectedEntryIds([])
   }
 
+  function downloadSelectedEntries() {
+    const selectedEntries = entries.filter((entry) =>
+      selectedEntryIds.includes(entry.id),
+    )
+
+    if (selectedEntries.length === 1) {
+      downloadMarkdownEntry(selectedEntries[0])
+      return
+    }
+
+    if (selectedEntries.length > 1) {
+      downloadMarkdownEntriesZip(selectedEntries)
+    }
+  }
+
   function updateSort(nextKey) {
     setSortConfig((current) => ({
       direction:
@@ -235,6 +254,7 @@ function JournalWorkspace({ entries, onEntriesChange }) {
         onClearFilters={clearFilters}
         onCreatedDateRangeChange={setCreatedDateRange}
         onDeleteSelected={deleteSelectedEntries}
+        onDownloadSelected={downloadSelectedEntries}
         onFavoriteFilterChange={setFavoriteFilter}
         onNewEntry={openNewEntry}
         onSearchChange={setSearchQuery}
