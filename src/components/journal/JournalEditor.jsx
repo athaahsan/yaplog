@@ -3,9 +3,10 @@ import { ArrowLeft, Loader2, Save, Sparkles, Star } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
+import { JOURNAL_BODY_MAX_CHARS } from '@/data/journalConfig'
 import {
-  TITLE_WORD_THRESHOLD,
-  countWords,
+  AI_ASSISTANT_MAX_CHARS,
+  TITLE_ASSISTANT_MIN_CHARS,
   requestJournalAssistant,
 } from '@/lib/journalAssistant'
 import { cn } from '@/lib/utils'
@@ -64,9 +65,11 @@ function JournalEditor({
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
   const [titleStatus, setTitleStatus] = useState('idle')
   const [titleError, setTitleError] = useState('')
-  const bodyWordCount = countWords(draft.body)
+  const bodyCharCount = draft.body.trim().length
   const canSuggestTitle =
-    !draft.title.trim() && bodyWordCount >= TITLE_WORD_THRESHOLD
+    !draft.title.trim() &&
+    bodyCharCount >= TITLE_ASSISTANT_MIN_CHARS &&
+    bodyCharCount <= AI_ASSISTANT_MAX_CHARS
 
   function restoreEditorScroll(scrollTop) {
     const scrollContainer = editorScrollRef.current
@@ -229,7 +232,7 @@ function JournalEditor({
 
   function updateBody(event) {
     rememberEditorScroll()
-    onUpdateDraft('body', event.target.value)
+    onUpdateDraft('body', event.target.value.slice(0, JOURNAL_BODY_MAX_CHARS))
   }
 
   function handleBodyKeyDown(event) {
@@ -424,6 +427,7 @@ function JournalEditor({
             ref={bodyInputRef}
             className="min-h-[1.65em] flex-none resize-none overflow-hidden bg-transparent text-[17px] leading-[1.65] text-foreground outline-none placeholder:text-muted-foreground max-md:text-base"
             value={draft.body}
+            maxLength={JOURNAL_BODY_MAX_CHARS}
             placeholder="Start writing..."
             onBlur={() => setIsBodyEditing(false)}
             onBeforeInput={() => rememberEditorScroll({ force: true })}
@@ -450,7 +454,9 @@ function JournalEditor({
         )}
 
         <JournalContentAssistant
-          onApplyContent={(content) => onUpdateDraft('body', content)}
+          onApplyContent={(content) =>
+            onUpdateDraft('body', content.slice(0, JOURNAL_BODY_MAX_CHARS))
+          }
           body={draft.body}
         />
       </div>

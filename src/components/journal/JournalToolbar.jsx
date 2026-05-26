@@ -117,12 +117,24 @@ function JournalToolbar({
           size={16}
         />
         <Input
-          type="search"
-          placeholder="Search title..."
-          className="h-9 rounded-lg bg-card pl-9 shadow-none"
+          type="text"
+          placeholder="Search entries..."
+          className="h-9 rounded-lg bg-card pl-9 pr-9 shadow-none"
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
         />
+        {searchQuery && (
+          <Button
+            className="absolute right-1.5 size-7 rounded-md p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+            variant="ghost"
+            size="icon"
+            type="button"
+            aria-label="Clear search"
+            onClick={() => onSearchChange('')}
+          >
+            <X size={15} />
+          </Button>
+        )}
       </label>
 
       <Button

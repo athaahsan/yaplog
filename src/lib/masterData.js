@@ -1,3 +1,5 @@
+import { JOURNAL_BODY_MAX_CHARS } from '@/data/journalConfig'
+
 export const MASTER_STORAGE_KEY = 'yaplog-master'
 
 const LEGACY_THEME_KEY = 'yaplog-theme'
@@ -184,7 +186,10 @@ function normalizeEntries(entries) {
           typeof entry.title === 'string' && entry.title.trim()
             ? entry.title
             : 'Untitled entry',
-        body: typeof entry.body === 'string' ? entry.body : '',
+        body:
+          typeof entry.body === 'string'
+            ? entry.body.slice(0, JOURNAL_BODY_MAX_CHARS)
+            : '',
         mood: validMoods.has(entry.mood) ? entry.mood : defaultMood,
         favorite: Boolean(entry.favorite),
         createdAt:

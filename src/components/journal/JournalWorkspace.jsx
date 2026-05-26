@@ -39,11 +39,13 @@ function JournalWorkspace({ entries, onEntriesChange }) {
     (favoriteFilter !== 'all' ? 1 : 0) +
     (hasDateRange(createdDateRange) ? 1 : 0) +
     (hasDateRange(updatedDateRange) ? 1 : 0)
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase()
   const filteredEntries = entries
     .filter((entry) => {
-      const matchesSearch = entry.title
-        .toLowerCase()
-        .includes(searchQuery.trim().toLowerCase())
+      const matchesSearch =
+        !normalizedSearchQuery ||
+        entry.title.toLowerCase().includes(normalizedSearchQuery) ||
+        (entry.body || '').toLowerCase().includes(normalizedSearchQuery)
       const matchesMood =
         selectedMoods.length === 0 || selectedMoods.includes(entry.mood)
       const matchesFavorite =
@@ -277,6 +279,7 @@ function JournalWorkspace({ entries, onEntriesChange }) {
         onUpdateSort={updateSort}
         selectedEntryIds={selectedEntryIds}
         sortConfig={sortConfig}
+        searchQuery={searchQuery}
       />
     </div>
   )

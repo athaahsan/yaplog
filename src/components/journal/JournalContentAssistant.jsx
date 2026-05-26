@@ -2,8 +2,8 @@ import { ChevronDown, ChevronUp, Loader2, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
-  CONTENT_ASSISTANT_WORD_THRESHOLD,
-  countWords,
+  AI_ASSISTANT_MAX_CHARS,
+  CONTENT_ASSISTANT_MIN_CHARS,
   requestJournalAssistant,
 } from '@/lib/journalAssistant'
 
@@ -18,8 +18,10 @@ function JournalContentAssistant({ body, onApplyContent }) {
   const [suggestionBody, setSuggestionBody] = useState('')
   const [error, setError] = useState('')
   const requestControllerRef = useRef(null)
-  const wordCount = countWords(body)
-  const canAssist = wordCount >= CONTENT_ASSISTANT_WORD_THRESHOLD
+  const bodyCharCount = body.trim().length
+  const canAssist =
+    bodyCharCount >= CONTENT_ASSISTANT_MIN_CHARS &&
+    bodyCharCount <= AI_ASSISTANT_MAX_CHARS
   const suggestionMatchesBody = !suggestionBody || suggestionBody === body
   const assistantStatus = suggestionMatchesBody ? status : 'idle'
   const panelOpen = canAssist && assistantStatus !== 'idle'

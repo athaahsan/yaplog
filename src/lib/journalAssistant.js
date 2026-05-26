@@ -1,9 +1,6 @@
-export const TITLE_WORD_THRESHOLD = 30
-export const CONTENT_ASSISTANT_WORD_THRESHOLD = 50
-
-export function countWords(value) {
-  return value.trim().split(/\s+/).filter(Boolean).length
-}
+export const TITLE_ASSISTANT_MIN_CHARS = 150
+export const CONTENT_ASSISTANT_MIN_CHARS = 250
+export const AI_ASSISTANT_MAX_CHARS = 12000
 
 export async function requestJournalAssistant({ action, content, signal }) {
   const response = await fetch('/api/journal-assistant', {

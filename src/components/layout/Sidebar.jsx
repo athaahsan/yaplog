@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { APP_VERSION } from '@/data/appConfig'
 import { cn } from '@/lib/utils'
 
 const appLinks = [
@@ -115,8 +116,13 @@ function Sidebar({
       data-open={sidebarOpen}
       aria-label="Main navigation"
     >
-      <header className="flex min-h-16 items-center gap-2.5 border-b border-sidebar-border px-[18px] text-[17px] font-semibold">
-        <span className="flex-1 underline decoration-double">YapLog</span>
+      <header className="flex min-h-16 items-center gap-2.5 border-b border-sidebar-border px-[18px]">
+        <span className="flex-1 text-[17px] font-semibold underline decoration-double">
+          YapLog
+        </span>
+        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
+          {APP_VERSION}
+        </span>
         <Button
           className="hidden size-9 rounded-lg text-foreground max-[720px]:grid"
           variant="ghost"

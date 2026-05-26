@@ -5,7 +5,7 @@ import { formatDateTime } from '../../lib/dateTime'
 
 const sortableColumns = {
   createdAt: 'Created time',
-  title: 'Title',
+  title: 'Entry',
   updatedAt: 'Last edited time',
 }
 
@@ -13,10 +13,58 @@ const checkboxClassName =
   "grid size-[17px] appearance-none place-items-center rounded border border-muted-foreground/35 bg-muted/20 after:size-[9px] after:rounded-[2px] after:bg-transparent after:content-[''] checked:border-muted-foreground/50 checked:bg-muted/20 checked:after:bg-foreground/60"
 
 const headerCellClassName =
-  'sticky top-0 z-20 h-10 whitespace-nowrap border-b border-border bg-background px-3.5 text-left align-middle text-xs font-semibold text-muted-foreground'
+  'sticky top-0 z-20 h-10 whitespace-nowrap border-b border-border bg-background/72 px-3.5 text-left align-middle text-xs font-semibold text-muted-foreground backdrop-blur-md backdrop-saturate-150'
 
 const bodyCellClassName =
-  'h-[46px] whitespace-nowrap border-b border-border px-3.5 align-middle'
+  'h-[64px] whitespace-nowrap border-b border-border px-3.5 align-middle'
+
+function normalizePreviewText(value) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function getBodyPreview(entry, searchQuery) {
+  const body = normalizePreviewText(entry.body || '')
+  const query = searchQuery.trim().toLowerCase()
+
+  if (!body || !query) {
+    return body
+  }
+
+  const matchIndex = body.toLowerCase().indexOf(query)
+
+  if (matchIndex === -1) {
+    return body
+  }
+
+  return `${matchIndex > 0 ? '...' : ''}${body.slice(matchIndex)}`
+}
+
+function HighlightedText({ query, text }) {
+  const normalizedQuery = query.trim()
+
+  if (!normalizedQuery) {
+    return text
+  }
+
+  const parts = text.split(new RegExp(`(${escapeRegExp(normalizedQuery)})`, 'gi'))
+
+  return parts.map((part, index) =>
+    part.toLowerCase() === normalizedQuery.toLowerCase() ? (
+      <mark
+        className="rounded-[3px] bg-primary/20 px-0.5 text-foreground"
+        key={`${part}-${index}`}
+      >
+        {part}
+      </mark>
+    ) : (
+      <span key={`${part}-${index}`}>{part}</span>
+    ),
+  )
+}
 
 function JournalTable({
   allEntriesSelected,
@@ -26,6 +74,7 @@ function JournalTable({
   onToggleFavorite,
   onToggleSelectAll,
   onUpdateSort,
+  searchQuery,
   selectedEntryIds,
   sortConfig,
 }) {
@@ -116,6 +165,7 @@ function JournalTable({
         <tbody>
           {entries.map((entry) => {
             const selected = selectedEntryIds.includes(entry.id)
+            const bodyPreview = getBodyPreview(entry, searchQuery)
 
             return (
               <tr
@@ -149,10 +199,19 @@ function JournalTable({
                 <td
                   className={cn(
                     bodyCellClassName,
-                    'w-[36%] min-w-60 font-medium text-foreground group-hover:text-inherit group-focus-visible:text-inherit',
+                    'w-[36%] min-w-60 text-foreground group-hover:text-inherit group-focus-visible:text-inherit',
                   )}
                 >
-                  {entry.title}
+                  <div className="grid min-w-0 gap-1">
+                    <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-medium">
+                      <HighlightedText query={searchQuery} text={entry.title} />
+                    </span>
+                    {bodyPreview && (
+                      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-normal text-muted-foreground group-hover:text-muted-foreground group-focus-visible:text-muted-foreground">
+                        <HighlightedText query={searchQuery} text={bodyPreview} />
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className={bodyCellClassName}>
                   <span

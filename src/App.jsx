@@ -52,7 +52,6 @@ function App() {
   const [authUser, setAuthUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(() => hasSupabaseConfig())
   const [cloudReady, setCloudReady] = useState(false)
-  const [pendingAuthChoice, setPendingAuthChoice] = useState(null)
   const [authError, setAuthError] = useState('')
   const [pendingImport, setPendingImport] = useState(null)
   const [importError, setImportError] = useState('')
@@ -67,44 +66,28 @@ function App() {
     setAuthError('')
 
     try {
-      const localData = loadMasterData()
       const cloudRow = await fetchUserData(user.id)
 
       setAuthUser(user)
 
       if (!cloudRow) {
+        const localData = loadMasterData()
         const nextCloudData = touchMasterData(localData)
         const savedCloudData = await upsertUserData(user, nextCloudData)
 
-        setPendingAuthChoice(null)
         setMasterData(savedCloudData)
         setCloudReady(true)
         return
       }
 
       const cloudData = normalizeMasterData(cloudRow.master_data)
-      const shouldAskAboutLocalData =
-        hasMeaningfulMasterData(localData) &&
-        !areMasterDataEquivalent(localData, cloudData)
 
       setMasterData(cloudData)
-
-      if (shouldAskAboutLocalData) {
-        setPendingAuthChoice({
-          cloudData,
-          localData,
-          user,
-        })
-        setCloudReady(false)
-      } else {
-        setPendingAuthChoice(null)
-        setCloudReady(true)
-      }
+      setCloudReady(true)
     } catch (error) {
       setAuthError(error.message || 'Could not load your cloud data.')
       setAuthUser(null)
       setCloudReady(false)
-      setPendingAuthChoice(null)
       setMasterData(loadMasterData())
     } finally {
       setAuthLoading(false)
@@ -149,7 +132,6 @@ function App() {
         } else {
           setAuthUser(null)
           setCloudReady(false)
-          setPendingAuthChoice(null)
           setAuthLoading(false)
         }
       } catch (error) {
@@ -170,7 +152,6 @@ function App() {
       if (event === 'SIGNED_OUT') {
         setAuthUser(null)
         setCloudReady(false)
-        setPendingAuthChoice(null)
         setMasterData(loadMasterData())
         setAuthLoading(false)
         return
@@ -190,7 +171,7 @@ function App() {
   useEffect(() => {
     window.clearTimeout(cloudSaveTimeoutRef.current)
 
-    if (authLoading || pendingAuthChoice) {
+    if (authLoading) {
       return undefined
     }
 
@@ -206,7 +187,7 @@ function App() {
 
     saveMasterData(masterData)
     return undefined
-  }, [authLoading, authUser, cloudReady, masterData, pendingAuthChoice])
+  }, [authLoading, authUser, cloudReady, masterData])
 
   useEffect(() => {
     function handleEscape(event) {
@@ -270,53 +251,9 @@ function App() {
       await signOut()
       setAuthUser(null)
       setCloudReady(false)
-      setPendingAuthChoice(null)
       setMasterData(loadMasterData())
     } catch (error) {
       setAuthError(error.message || 'Could not sign out.')
-    }
-  }
-
-  function useCloudData() {
-    setMasterData(pendingAuthChoice.cloudData)
-    setCloudReady(true)
-    setPendingAuthChoice(null)
-  }
-
-  async function mergeLocalIntoCloud() {
-    try {
-      const mergedData = mergeMasterData(
-        pendingAuthChoice.cloudData,
-        pendingAuthChoice.localData,
-      )
-      const savedCloudData = await upsertUserData(
-        pendingAuthChoice.user,
-        mergedData,
-      )
-
-      setMasterData(savedCloudData)
-      setCloudReady(true)
-      setPendingAuthChoice(null)
-    } catch (error) {
-      setAuthError(error.message || 'Could not merge guest data into cloud.')
-    }
-  }
-
-  async function replaceCloudWithLocal() {
-    try {
-      const replacementData = touchMasterData(
-        normalizeMasterData(pendingAuthChoice.localData),
-      )
-      const savedCloudData = await upsertUserData(
-        pendingAuthChoice.user,
-        replacementData,
-      )
-
-      setMasterData(savedCloudData)
-      setCloudReady(true)
-      setPendingAuthChoice(null)
-    } catch (error) {
-      setAuthError(error.message || 'Could not replace cloud data.')
     }
   }
 
@@ -472,39 +409,6 @@ function App() {
         </div>
       )}
 
-      {pendingAuthChoice && (
-        <div
-          className="fixed inset-0 z-[85] grid place-items-center bg-black/45 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="auth-data-dialog-title"
-        >
-          <div className="w-full max-w-[460px] rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl">
-            <h2
-              className="text-lg font-semibold text-foreground"
-              id="auth-data-dialog-title"
-            >
-              Choose your YapLog data
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              This device has guest data, and your Google account already has
-              cloud data. Choose which one to use for this signed-in workspace.
-            </p>
-            <div className="mt-4 grid gap-2">
-              <Button type="button" onClick={useCloudData}>
-                Use cloud data
-              </Button>
-              <Button type="button" variant="secondary" onClick={mergeLocalIntoCloud}>
-                Merge guest into cloud
-              </Button>
-              <Button type="button" variant="ghost" onClick={replaceCloudWithLocal}>
-                Replace cloud with guest data
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {pendingImport && (
         <div
           className="fixed inset-0 z-[80] grid place-items-center bg-black/45 p-4"
@@ -539,31 +443,6 @@ function App() {
       )}
     </main>
   )
-}
-
-function hasMeaningfulMasterData(masterData) {
-  return Boolean(
-    masterData?.journal?.entries?.length ||
-      masterData?.tasks?.items?.length ||
-      masterData?.memos?.items?.length,
-  )
-}
-
-function areMasterDataEquivalent(firstMasterData, secondMasterData) {
-  const first = normalizeMasterData(firstMasterData)
-  const second = normalizeMasterData(secondMasterData)
-
-  return JSON.stringify({
-    settings: first.settings,
-    journal: first.journal,
-    tasks: first.tasks,
-    memos: first.memos,
-  }) === JSON.stringify({
-    settings: second.settings,
-    journal: second.journal,
-    tasks: second.tasks,
-    memos: second.memos,
-  })
 }
 
 export default App
