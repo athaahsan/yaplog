@@ -255,7 +255,7 @@ function Sidebar({
               role="menuitem"
             >
               <GoogleIcon className="size-4" />
-              <span className="font-semibold">Continue with Google</span>
+              <span className="font-semibold">Sign in</span>
             </Button>
             <Button
               className="h-auto justify-start gap-[9px] rounded-md p-2"

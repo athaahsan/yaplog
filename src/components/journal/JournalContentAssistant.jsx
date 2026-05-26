@@ -7,6 +7,11 @@ import {
   requestJournalAssistant,
 } from '@/lib/journalAssistant'
 
+const assistantDividerClassName =
+  'h-[0.5px] flex-1 bg-muted-foreground/25'
+const assistantDividerButtonClassName =
+  'h-8 rounded-lg px-2 text-muted-foreground hover:text-foreground'
+
 function JournalContentAssistant({ body, onApplyContent }) {
   const [status, setStatus] = useState('idle')
   const [suggestedContent, setSuggestedContent] = useState('')
@@ -90,34 +95,34 @@ function JournalContentAssistant({ body, onApplyContent }) {
       aria-label="Content assistant"
     >
       {!panelOpen ? (
-        <div className="flex min-h-8 items-center gap-2">
-          {!canAssist ? (
-            <div className="h-px flex-1 bg-muted-foreground/25" aria-hidden="true" />
-          ) : (
+        <div className="flex h-8 items-center gap-2">
+          {canAssist ? (
             <>
-              <div className="h-px flex-1 bg-muted-foreground/25" aria-hidden="true" />
-            <Button
-              className="h-8 rounded-lg px-2 text-muted-foreground animate-in fade-in-0 zoom-in-95 hover:text-foreground"
-              variant="ghost"
-              size="sm"
-              type="button"
-              aria-label="Polish entry"
-              title="Polish entry"
-              onClick={generateSuggestion}
-            >
-              <Sparkles className="size-3.5" />
-              <ChevronDown className="size-3.5 opacity-70" />
-            </Button>
-              <div className="h-px flex-1 bg-muted-foreground/25" aria-hidden="true" />
+              <div className={assistantDividerClassName} aria-hidden="true" />
+              <Button
+                className={`${assistantDividerButtonClassName} animate-in fade-in-0 zoom-in-95`}
+                variant="ghost"
+                size="sm"
+                type="button"
+                aria-label="Polish entry"
+                title="Polish entry"
+                onClick={generateSuggestion}
+              >
+                <Sparkles className="size-3.5" />
+                <ChevronDown className="size-3.5 opacity-70" />
+              </Button>
+              <div className={assistantDividerClassName} aria-hidden="true" />
             </>
+          ) : (
+            <div className="h-px flex-1 bg-transparent" aria-hidden="true" />
           )}
         </div>
       ) : (
         <div className="border-b border-muted-foreground/25 animate-in fade-in-0 slide-in-from-top-1 duration-200">
-          <div className="flex min-h-8 items-center gap-2">
-            <div className="h-px flex-1 bg-muted-foreground/25" aria-hidden="true" />
+          <div className="flex h-8 items-center gap-2">
+            <div className={assistantDividerClassName} aria-hidden="true" />
             <Button
-              className="h-8 rounded-lg px-2 text-muted-foreground hover:text-foreground"
+              className={assistantDividerButtonClassName}
               variant="ghost"
               size="sm"
               type="button"
@@ -128,7 +133,7 @@ function JournalContentAssistant({ body, onApplyContent }) {
               <Sparkles className="size-3.5" />
               <ChevronUp className="size-3.5 opacity-70" />
             </Button>
-            <div className="h-px flex-1 bg-muted-foreground/25" aria-hidden="true" />
+            <div className={assistantDividerClassName} aria-hidden="true" />
           </div>
 
           <div className="min-w-0 overflow-hidden pb-3">
@@ -154,7 +159,7 @@ function JournalContentAssistant({ body, onApplyContent }) {
             )}
 
             {assistantStatus === 'success' && (
-              <div className="-mx-2 min-w-0 max-w-full whitespace-pre-wrap break-words rounded-md bg-muted/15 px-2 py-1 text-[17px] leading-[1.65] [overflow-wrap:anywhere]">
+              <div className="-mx-2 min-w-0 max-w-full whitespace-pre-wrap break-words rounded-md bg-muted/40 px-2 py-1 text-[17px] leading-[1.65] [overflow-wrap:anywhere]">
                 {suggestedContent}
               </div>
             )}

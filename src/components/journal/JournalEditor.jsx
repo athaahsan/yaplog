@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowLeft, Loader2, Save, Sparkles, Star } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -33,7 +33,7 @@ const moodToneClassNames = {
 }
 
 const markdownPreviewClassName = cn(
-  'min-h-[max(260px,calc(100dvh-360px))] flex-none cursor-text text-[17px] leading-[1.65] text-foreground outline-none md:text-[17px]',
+  'flex-none cursor-text text-[17px] leading-[1.65] text-foreground outline-none md:text-[17px]',
   '[&_blockquote]:mb-[0.9em] [&_blockquote]:border-l-[3px] [&_blockquote]:border-border [&_blockquote]:pl-[0.9em] [&_blockquote]:text-muted-foreground',
   '[&_code]:rounded-[5px] [&_code]:bg-muted [&_code]:px-[0.34em] [&_code]:py-[0.12em] [&_code]:text-[0.9em]',
   '[&_h1]:mb-[0.45em] [&_h1]:mt-[1.15em] [&_h1]:text-[1.55em] [&_h1]:leading-[1.2]',
@@ -45,21 +45,55 @@ const markdownPreviewClassName = cn(
 
 function JournalEditor({
   draft,
+  hasUnsavedChanges,
   moodOptions,
   onBack,
   onSave,
   onUpdateDraft,
 }) {
   const bodyInputRef = useRef(null)
+  const editorScrollRef = useRef(null)
   const latestTitleRef = useRef(draft.title)
+  const pendingScrollTopRef = useRef(null)
   const titleRequestIdRef = useRef(0)
   const updateDraftRef = useRef(onUpdateDraft)
   const [isBodyEditing, setIsBodyEditing] = useState(false)
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
   const [titleStatus, setTitleStatus] = useState('idle')
   const [titleError, setTitleError] = useState('')
   const bodyWordCount = countWords(draft.body)
   const canSuggestTitle =
     !draft.title.trim() && bodyWordCount >= TITLE_WORD_THRESHOLD
+
+  function restoreEditorScroll(scrollTop) {
+    const scrollContainer = editorScrollRef.current
+
+    if (!scrollContainer) {
+      pendingScrollTopRef.current = null
+      return undefined
+    }
+
+    scrollContainer.scrollTop = scrollTop
+
+    const animationFrameId = window.requestAnimationFrame(() => {
+      scrollContainer.scrollTop = scrollTop
+
+      window.requestAnimationFrame(() => {
+        scrollContainer.scrollTop = scrollTop
+        pendingScrollTopRef.current = null
+      })
+    })
+
+    const timeoutId = window.setTimeout(() => {
+      scrollContainer.scrollTop = scrollTop
+      pendingScrollTopRef.current = null
+    }, 0)
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      window.clearTimeout(timeoutId)
+    }
+  }
 
   useEffect(() => {
     latestTitleRef.current = draft.title
@@ -70,7 +104,37 @@ function JournalEditor({
   }, [onUpdateDraft])
 
   useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return undefined
+    }
+
+    function handleBeforeUnload(event) {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  useEffect(() => {
+    if (!leaveDialogOpen) {
+      return undefined
+    }
+
+    function handleEscape(event) {
+      if (event.key === 'Escape') {
+        setLeaveDialogOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [leaveDialogOpen])
+
+  useLayoutEffect(() => {
     const bodyInput = bodyInputRef.current
+    const scrollContainer = editorScrollRef.current
 
     if (!bodyInput || !isBodyEditing) {
       return
@@ -78,7 +142,26 @@ function JournalEditor({
 
     bodyInput.style.height = 'auto'
     bodyInput.style.height = `${bodyInput.scrollHeight}px`
+
+    if (pendingScrollTopRef.current !== null && scrollContainer) {
+      const scrollTop = pendingScrollTopRef.current
+
+      const cleanup = restoreEditorScroll(scrollTop)
+
+      return cleanup
+    }
   }, [draft.body, isBodyEditing])
+
+  useLayoutEffect(() => {
+    const scrollTop = pendingScrollTopRef.current
+    const scrollContainer = editorScrollRef.current
+
+    if (scrollTop === null || !scrollContainer) {
+      return
+    }
+
+    return restoreEditorScroll(scrollTop)
+  }, [isBodyEditing])
 
   useEffect(() => {
     const bodyInput = bodyInputRef.current
@@ -87,9 +170,7 @@ function JournalEditor({
       return
     }
 
-    bodyInput.focus()
-    bodyInput.selectionStart = bodyInput.value.length
-    bodyInput.selectionEnd = bodyInput.value.length
+    bodyInput.focus({ preventScroll: true })
   }, [isBodyEditing])
 
   async function suggestTitle() {
@@ -128,6 +209,67 @@ function JournalEditor({
     }
   }
 
+  function startBodyEditing() {
+    if (!isBodyEditing) {
+      pendingScrollTopRef.current = editorScrollRef.current?.scrollTop ?? 0
+      setIsBodyEditing(true)
+    }
+  }
+
+  function rememberEditorScroll({ force = false } = {}) {
+    if (pendingScrollTopRef.current !== null && !force) {
+      return
+    }
+
+    pendingScrollTopRef.current = editorScrollRef.current?.scrollTop ?? null
+  }
+
+  function updateBody(event) {
+    rememberEditorScroll()
+    onUpdateDraft('body', event.target.value)
+  }
+
+  function handleBodyKeyDown(event) {
+    if (
+      event.key === 'Backspace' ||
+      event.key === 'Delete' ||
+      event.key === 'Enter'
+    ) {
+      rememberEditorScroll({ force: true })
+    }
+  }
+
+  function handlePreviewPointerDown(event) {
+    event.preventDefault()
+    startBodyEditing()
+  }
+
+  function handlePreviewKeyDown(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      startBodyEditing()
+    }
+  }
+
+  function requestBack() {
+    if (hasUnsavedChanges) {
+      setLeaveDialogOpen(true)
+      return
+    }
+
+    onBack()
+  }
+
+  function saveAndLeave() {
+    setLeaveDialogOpen(false)
+    onSave()
+  }
+
+  function discardAndLeave() {
+    setLeaveDialogOpen(false)
+    onBack()
+  }
+
   return (
     <div className="relative flex h-full min-h-0 flex-col">
       <header className="mb-[30px] flex items-center justify-between max-md:mb-[22px]">
@@ -135,34 +277,19 @@ function JournalEditor({
           variant="ghost"
           type="button"
           className="h-9 rounded-lg px-2.5 text-muted-foreground hover:text-foreground"
-          onClick={onBack}
+          onClick={requestBack}
         >
           <ArrowLeft size={17} />
           <span>Back</span>
         </Button>
 
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            type="button"
-            aria-pressed={draft.favorite}
-            className={cn(
-              'size-9 rounded-lg text-muted-foreground hover:text-foreground',
-              draft.favorite && 'text-[oklch(0.8_0.15_85)]',
-            )}
-            onClick={() => onUpdateDraft('favorite', !draft.favorite)}
-            title={draft.favorite ? 'Unfavorite entry' : 'Favorite entry'}
-          >
-            <Star
-              size={18}
-              className={cn(
-                'fill-transparent transition-transform',
-                draft.favorite &&
-                  'fill-current drop-shadow-[0_0_6px_oklch(0.8_0.15_85/40%)]',
-              )}
-            />
-          </Button>
+          {hasUnsavedChanges && (
+            <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-[oklch(0.74_0.14_75)]" />
+              <span>Unsaved</span>
+            </span>
+          )}
 
           <Button className="h-9 rounded-lg px-3.5 font-semibold" type="button" onClick={onSave}>
             <Save size={16} />
@@ -171,7 +298,10 @@ function JournalEditor({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1 pt-2 [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_55%,transparent)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-track]:bg-transparent">
+      <div
+        className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1 pt-2 [overflow-anchor:none] [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_55%,transparent)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-track]:bg-transparent"
+        ref={editorScrollRef}
+      >
         <div className="grid gap-1.5">
           <div className="flex min-w-0 items-center">
             <div
@@ -259,30 +389,52 @@ function JournalEditor({
               </Button>
             )
           })}
+
+          <div className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
+
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            type="button"
+            aria-pressed={draft.favorite}
+            className={cn(
+              'size-[34px] rounded-lg text-muted-foreground hover:bg-transparent hover:text-foreground',
+              draft.favorite && 'text-foreground',
+            )}
+            onClick={() => onUpdateDraft('favorite', !draft.favorite)}
+            title={draft.favorite ? 'Unfavorite entry' : 'Favorite entry'}
+          >
+            <Star
+              size={18}
+              className={cn(
+                'fill-transparent transition-transform',
+                draft.favorite && 'fill-current',
+              )}
+            />
+          </Button>
         </div>
 
-        <JournalContentAssistant
-          onApplyContent={(content) => onUpdateDraft('body', content)}
-          body={draft.body}
-        />
+        <div className="my-2 h-px flex-none bg-muted-foreground/25" aria-hidden="true" />
 
         {isBodyEditing ? (
           <textarea
             ref={bodyInputRef}
-            className="min-h-[max(260px,calc(100dvh-360px))] flex-none resize-none overflow-hidden bg-transparent text-[17px] leading-[1.65] text-foreground outline-none placeholder:text-muted-foreground max-md:min-h-[360px] max-md:text-base"
+            className="min-h-[1.65em] flex-none resize-none overflow-hidden bg-transparent text-[17px] leading-[1.65] text-foreground outline-none placeholder:text-muted-foreground max-md:text-base"
             value={draft.body}
             placeholder="Start writing..."
             onBlur={() => setIsBodyEditing(false)}
-            onChange={(event) => onUpdateDraft('body', event.target.value)}
+            onBeforeInput={() => rememberEditorScroll({ force: true })}
+            onChange={updateBody}
+            onKeyDown={handleBodyKeyDown}
           />
         ) : (
           <div
-            className={cn(markdownPreviewClassName, 'max-md:min-h-[360px] max-md:text-base')}
+            className={cn(markdownPreviewClassName, 'max-md:text-base')}
             role="textbox"
             tabIndex={0}
             aria-label="Journal content"
-            onClick={() => setIsBodyEditing(true)}
-            onFocus={() => setIsBodyEditing(true)}
+            onKeyDown={handlePreviewKeyDown}
+            onPointerDown={handlePreviewPointerDown}
           >
             {draft.body.trim() ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -293,7 +445,68 @@ function JournalEditor({
             )}
           </div>
         )}
+
+        <JournalContentAssistant
+          onApplyContent={(content) => onUpdateDraft('body', content)}
+          body={draft.body}
+        />
       </div>
+
+      {leaveDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-background/70 px-4 backdrop-blur-sm animate-in fade-in-0 duration-150"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setLeaveDialogOpen(false)
+            }
+          }}
+        >
+          <section
+            aria-labelledby="unsaved-entry-title"
+            aria-describedby="unsaved-entry-description"
+            aria-modal="true"
+            className="w-full max-w-[380px] rounded-lg border border-border bg-popover p-4 text-popover-foreground shadow-[0_18px_48px_oklch(0_0_0/22%)] animate-in zoom-in-95 duration-150"
+            role="dialog"
+          >
+            <div className="mb-4">
+              <h2
+                className="mb-1.5 text-base font-semibold leading-tight"
+                id="unsaved-entry-title"
+              >
+                Unsaved changes
+              </h2>
+              <p
+                className="text-sm leading-6 text-muted-foreground"
+                id="unsaved-entry-description"
+              >
+                This entry has changes that have not been saved yet.
+              </p>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={discardAndLeave}
+              >
+                Discard
+              </Button>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setLeaveDialogOpen(false)}
+              >
+                Keep editing
+              </Button>
+              <Button type="button" onClick={saveAndLeave}>
+                <Save size={16} />
+                <span>Save</span>
+              </Button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }

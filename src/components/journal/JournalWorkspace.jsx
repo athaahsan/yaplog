@@ -16,6 +16,7 @@ function JournalWorkspace({ entries, onEntriesChange }) {
   const [journalMode, setJournalMode] = useState('table')
   const [editingEntryId, setEditingEntryId] = useState(null)
   const [entryDraft, setEntryDraft] = useState(null)
+  const [initialEntryDraft, setInitialEntryDraft] = useState(null)
   const [selectedEntryIds, setSelectedEntryIds] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMoods, setSelectedMoods] = useState([])
@@ -142,19 +143,25 @@ function JournalWorkspace({ entries, onEntriesChange }) {
   }
 
   function openNewEntry() {
-    setEditingEntryId(null)
-    setEntryDraft({
+    const nextDraft = {
       title: '',
       body: '',
       mood: moodOptions[1],
       favorite: false,
-    })
+    }
+
+    setEditingEntryId(null)
+    setEntryDraft(nextDraft)
+    setInitialEntryDraft(nextDraft)
     setJournalMode('editor')
   }
 
   function openEntry(entry) {
+    const nextDraft = { ...entry }
+
     setEditingEntryId(entry.id)
-    setEntryDraft(entry)
+    setEntryDraft(nextDraft)
+    setInitialEntryDraft(nextDraft)
     setJournalMode('editor')
   }
 
@@ -166,6 +173,7 @@ function JournalWorkspace({ entries, onEntriesChange }) {
     setJournalMode('table')
     setEditingEntryId(null)
     setEntryDraft(null)
+    setInitialEntryDraft(null)
   }
 
   function saveEntry() {
@@ -194,6 +202,7 @@ function JournalWorkspace({ entries, onEntriesChange }) {
     return (
       <JournalEditor
         draft={entryDraft}
+        hasUnsavedChanges={hasDraftChanged(entryDraft, initialEntryDraft)}
         moodOptions={moodOptions}
         onBack={closeEditor}
         onSave={saveEntry}
@@ -250,6 +259,19 @@ function JournalWorkspace({ entries, onEntriesChange }) {
         sortConfig={sortConfig}
       />
     </div>
+  )
+}
+
+function hasDraftChanged(draft, initialDraft) {
+  if (!draft || !initialDraft) {
+    return false
+  }
+
+  return (
+    draft.title !== initialDraft.title ||
+    draft.body !== initialDraft.body ||
+    draft.mood !== initialDraft.mood ||
+    Boolean(draft.favorite) !== Boolean(initialDraft.favorite)
   )
 }
 
