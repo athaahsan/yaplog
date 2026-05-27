@@ -12,6 +12,131 @@ const assistantDividerClassName =
 const assistantDividerButtonClassName =
   'h-8 rounded-lg px-2 text-muted-foreground hover:text-foreground'
 
+function tokenizeDiffText(value) {
+  return value.match(/\s+|[^\s]+/g) || []
+}
+
+function normalizeDiffToken(value) {
+  return value
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[“”„‟]/g, '"')
+}
+
+function buildDiffParts(original, suggested) {
+  const originalTokens = tokenizeDiffText(original)
+  const suggestedTokens = tokenizeDiffText(suggested)
+  const rowLength = suggestedTokens.length + 1
+  const directions = new Uint8Array((originalTokens.length + 1) * rowLength)
+  let previousRow = new Uint16Array(rowLength)
+  let currentRow = new Uint16Array(rowLength)
+
+  for (let originalIndex = 1; originalIndex <= originalTokens.length; originalIndex += 1) {
+    for (let suggestedIndex = 1; suggestedIndex <= suggestedTokens.length; suggestedIndex += 1) {
+      const cellIndex = originalIndex * rowLength + suggestedIndex
+
+      if (
+        normalizeDiffToken(originalTokens[originalIndex - 1]) ===
+        normalizeDiffToken(suggestedTokens[suggestedIndex - 1])
+      ) {
+        currentRow[suggestedIndex] = previousRow[suggestedIndex - 1] + 1
+        directions[cellIndex] = 1
+      } else if (previousRow[suggestedIndex] >= currentRow[suggestedIndex - 1]) {
+        currentRow[suggestedIndex] = previousRow[suggestedIndex]
+        directions[cellIndex] = 2
+      } else {
+        currentRow[suggestedIndex] = currentRow[suggestedIndex - 1]
+        directions[cellIndex] = 3
+      }
+    }
+
+    const completedRow = previousRow
+    previousRow = currentRow
+    currentRow = completedRow
+    currentRow.fill(0)
+  }
+
+  const parts = []
+  let originalIndex = originalTokens.length
+  let suggestedIndex = suggestedTokens.length
+
+  function addPart(type, value) {
+    if (!value) {
+      return
+    }
+
+    const previousPart = parts[parts.length - 1]
+
+    if (previousPart?.type === type) {
+      previousPart.value = `${value}${previousPart.value}`
+      return
+    }
+
+    parts.push({ type, value })
+  }
+
+  while (originalIndex > 0 || suggestedIndex > 0) {
+    const cellIndex = originalIndex * rowLength + suggestedIndex
+    const direction = directions[cellIndex]
+
+    if (
+      originalIndex > 0 &&
+      suggestedIndex > 0 &&
+      direction === 1
+    ) {
+      addPart('same', suggestedTokens[suggestedIndex - 1])
+      originalIndex -= 1
+      suggestedIndex -= 1
+    } else if (suggestedIndex > 0 && (originalIndex === 0 || direction === 3)) {
+      addPart('added', suggestedTokens[suggestedIndex - 1])
+      suggestedIndex -= 1
+    } else if (originalIndex > 0) {
+      addPart('removed', originalTokens[originalIndex - 1])
+      originalIndex -= 1
+    }
+  }
+
+  return parts.reverse()
+}
+
+function DiffPreview({ original, suggested }) {
+  const parts = buildDiffParts(original, suggested)
+
+  return parts.map((part, index) => {
+    const whitespaceOnly = !part.value.trim()
+    const displayValue = whitespaceOnly
+      ? part.value.replace(/(\r?\n)[\t ]*(\r?\n)+/g, '$1')
+      : part.value
+
+    if (whitespaceOnly) {
+      return <span key={`${part.type}-${index}`}>{displayValue}</span>
+    }
+
+    if (part.type === 'added') {
+      return (
+        <ins
+          className="rounded-[4px] bg-emerald-500/16 px-0.5 text-foreground no-underline ring-1 ring-inset ring-emerald-500/18"
+          key={`${part.type}-${index}`}
+        >
+          {part.value}
+        </ins>
+      )
+    }
+
+    if (part.type === 'removed') {
+      return (
+        <del
+          className="rounded-[4px] bg-red-500/14 px-0.5 text-muted-foreground decoration-red-500/70 ring-1 ring-inset ring-red-500/16"
+          key={`${part.type}-${index}`}
+        >
+          {part.value}
+        </del>
+      )
+    }
+
+    return <span key={`${part.type}-${index}`}>{part.value}</span>
+  })
+}
+
 function JournalContentAssistant({ body, onApplyContent }) {
   const [status, setStatus] = useState('idle')
   const [suggestedContent, setSuggestedContent] = useState('')
@@ -161,8 +286,11 @@ function JournalContentAssistant({ body, onApplyContent }) {
             )}
 
             {assistantStatus === 'success' && (
-              <div className="min-w-0 max-w-full whitespace-pre-wrap break-words bg-muted/40 py-1 text-[17px] leading-[1.65] [overflow-wrap:anywhere]">
-                {suggestedContent}
+              <div className="min-w-0 max-w-full whitespace-pre-wrap break-words bg-muted/50 py-1 text-[17px] leading-[1.65] [overflow-wrap:anywhere]">
+                <DiffPreview
+                  original={suggestionBody}
+                  suggested={suggestedContent}
+                />
               </div>
             )}
           </div>
