@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import AuthDialog from './components/auth/AuthDialog'
+import ProfileDialog from './components/auth/ProfileDialog'
 import MobileHeader from './components/layout/MobileHeader'
 import Sidebar from './components/layout/Sidebar'
 import PlaceholderWorkspace from './components/PlaceholderWorkspace'
@@ -18,8 +20,12 @@ import {
   getCurrentSession,
   getUserProfile,
   onAuthStateChange,
+  sendPasswordReset,
   signInWithGoogle,
+  signInWithPassword,
   signOut,
+  signUpWithPassword,
+  updatePassword,
   upsertUserData,
 } from './lib/yaplogUserData'
 import './App.css'
@@ -53,13 +59,26 @@ function App() {
   const [authLoading, setAuthLoading] = useState(() => hasSupabaseConfig())
   const [cloudReady, setCloudReady] = useState(false)
   const [authError, setAuthError] = useState('')
+  const [signInDialogOpen, setSignInDialogOpen] = useState(false)
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false)
+  const [authDialogMode, setAuthDialogMode] = useState('signIn')
+  const [savedAuthProfile, setSavedAuthProfile] = useState(null)
   const [pendingImport, setPendingImport] = useState(null)
   const [importError, setImportError] = useState('')
   const importInputRef = useRef(null)
   const cloudSaveTimeoutRef = useRef(null)
   const font = masterData.settings.font
   const theme = masterData.settings.theme
-  const authProfile = authUser ? getUserProfile(authUser) : null
+  const authProfile = useMemo(() => {
+    if (!authUser) {
+      return null
+    }
+
+    return {
+      ...getUserProfile(authUser),
+      ...(savedAuthProfile || {}),
+    }
+  }, [authUser, savedAuthProfile])
 
   const prepareSignedInUser = useCallback(async (user) => {
     setAuthLoading(true)
@@ -73,20 +92,31 @@ function App() {
       if (!cloudRow) {
         const localData = loadMasterData()
         const nextCloudData = touchMasterData(localData)
-        const savedCloudData = await upsertUserData(user, nextCloudData)
+        const profile = getUserProfile(user)
+        const savedCloudData = await upsertUserData(user, nextCloudData, profile)
 
+        setSavedAuthProfile(profile)
         setMasterData(savedCloudData)
         setCloudReady(true)
         return
       }
 
       const cloudData = normalizeMasterData(cloudRow.master_data)
+      const providerProfile = getUserProfile(user)
+      const profile = {
+        ...providerProfile,
+        userName: cloudRow.user_name || providerProfile.userName,
+        userEmail: cloudRow.user_email || providerProfile.userEmail,
+        avatarUrl: cloudRow.avatar_url || providerProfile.avatarUrl,
+      }
 
+      setSavedAuthProfile(profile)
       setMasterData(cloudData)
       setCloudReady(true)
     } catch (error) {
       setAuthError(error.message || 'Could not load your cloud data.')
       setAuthUser(null)
+      setSavedAuthProfile(null)
       setCloudReady(false)
       setMasterData(loadMasterData())
     } finally {
@@ -131,6 +161,7 @@ function App() {
           await prepareSignedInUser(session.user)
         } else {
           setAuthUser(null)
+          setSavedAuthProfile(null)
           setCloudReady(false)
           setAuthLoading(false)
         }
@@ -159,6 +190,18 @@ function App() {
 
       if (event === 'SIGNED_IN' && session?.user) {
         prepareSignedInUser(session.user)
+        return
+      }
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setSignInDialogOpen(true)
+        setAuthDialogMode('reset')
+
+        if (session?.user) {
+          prepareSignedInUser(session.user)
+        } else {
+          setAuthLoading(false)
+        }
       }
     })
 
@@ -177,7 +220,7 @@ function App() {
 
     if (authUser && cloudReady) {
       cloudSaveTimeoutRef.current = window.setTimeout(() => {
-        upsertUserData(authUser, masterData).catch((error) => {
+        upsertUserData(authUser, masterData, authProfile).catch((error) => {
           setAuthError(error.message || 'Could not sync your cloud data.')
         })
       }, 400)
@@ -187,7 +230,7 @@ function App() {
 
     saveMasterData(masterData)
     return undefined
-  }, [authLoading, authUser, cloudReady, masterData])
+  }, [authLoading, authProfile, authUser, cloudReady, masterData])
 
   useEffect(() => {
     function handleEscape(event) {
@@ -244,12 +287,33 @@ function App() {
     }
   }
 
+  async function signInWithEmail(credentials) {
+    setAuthError('')
+    return signInWithPassword(credentials)
+  }
+
+  async function signUpWithEmail(credentials) {
+    setAuthError('')
+    return signUpWithPassword(credentials)
+  }
+
+  async function resetPassword(email) {
+    setAuthError('')
+    return sendPasswordReset(email)
+  }
+
+  async function setNewPassword(password) {
+    setAuthError('')
+    return updatePassword(password)
+  }
+
   async function signOutUser() {
     setAuthError('')
 
     try {
       await signOut()
       setAuthUser(null)
+      setSavedAuthProfile(null)
       setCloudReady(false)
       setMasterData(loadMasterData())
     } catch (error) {
@@ -318,6 +382,22 @@ function App() {
     setSidebarOpen(false)
   }
 
+  async function saveProfile(profile) {
+    if (!authUser) {
+      return
+    }
+
+    setAuthError('')
+    setSavedAuthProfile(profile)
+
+    try {
+      await upsertUserData(authUser, masterData, profile)
+    } catch (error) {
+      setAuthError(error.message || 'Could not save your profile.')
+      throw error
+    }
+  }
+
   return (
     <main className="grid h-dvh grid-cols-[264px_1fr] overflow-hidden bg-background text-foreground max-[720px]:block max-[720px]:min-h-dvh max-[720px]:w-full max-[720px]:max-w-full max-[720px]:overflow-x-hidden max-[720px]:overflow-y-hidden">
       <MobileHeader
@@ -343,8 +423,12 @@ function App() {
         onExportData={exportData}
         onImportData={openImportPicker}
         onFontChange={(value) => updateSetting('font', value)}
+        onProfile={() => setProfileDialogOpen(true)}
         onSelectApp={selectApp}
-        onSignIn={signIn}
+        onSignIn={() => {
+          setAuthDialogMode('signIn')
+          setSignInDialogOpen(true)
+        }}
         onSignOut={signOutUser}
         onThemeChange={(value) => updateSetting('theme', value)}
         sidebarOpen={sidebarOpen}
@@ -440,6 +524,28 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {signInDialogOpen && (
+        <AuthDialog
+          authLoading={authLoading}
+          initialMode={authDialogMode}
+          key={authDialogMode}
+          onClose={() => setSignInDialogOpen(false)}
+          onForgotPassword={resetPassword}
+          onGoogleSignIn={signIn}
+          onPasswordSignIn={signInWithEmail}
+          onPasswordSignUp={signUpWithEmail}
+          onPasswordUpdate={setNewPassword}
+        />
+      )}
+
+      {profileDialogOpen && authProfile && (
+        <ProfileDialog
+          profile={authProfile}
+          onClose={() => setProfileDialogOpen(false)}
+          onSave={saveProfile}
+        />
       )}
     </main>
   )

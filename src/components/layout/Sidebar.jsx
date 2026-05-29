@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  CalendarDays,
   CheckSquare,
   ChevronDown,
   Download,
@@ -11,6 +12,7 @@ import {
   NotebookPen,
   Sun,
   Upload,
+  UserRound,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,6 +21,7 @@ import { cn } from '@/lib/utils'
 
 const appLinks = [
   { label: 'Journal', icon: NotebookPen },
+  { label: 'Calendar', icon: CalendarDays },
   { label: 'Tasks', icon: CheckSquare },
   { label: 'Memos', icon: FileText },
 ]
@@ -48,30 +51,7 @@ const fontOptions = [
 ]
 
 const userMenuItemClassName =
-  'h-auto justify-start gap-[9px] rounded-md p-2 text-popover-foreground hover:bg-muted hover:text-popover-foreground disabled:pointer-events-none disabled:opacity-70'
-
-function GoogleIcon(props) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-      <path
-        fill="#4285F4"
-        d="M21.8 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.5c-.2 1.2-.9 2.3-2 3v2.4h3.2c1.9-1.7 3.1-4.2 3.1-7.1Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 22c2.7 0 5-.9 6.7-2.5l-3.2-2.4c-.9.6-2 .9-3.5.9-2.6 0-4.8-1.8-5.6-4.1H3.1v2.5C4.8 19.7 8.2 22 12 22Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M6.4 13.9c-.2-.6-.3-1.2-.3-1.9s.1-1.3.3-1.9V7.6H3.1C2.4 8.9 2 10.4 2 12s.4 3.1 1.1 4.4l3.3-2.5Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9C17 3 14.7 2 12 2 8.2 2 4.8 4.3 3.1 7.6l3.3 2.5C7.2 7.8 9.4 6 12 6Z"
-      />
-    </svg>
-  )
-}
+  'h-8 justify-start gap-2 rounded-md px-2.5 text-[13px] leading-none text-popover-foreground hover:bg-muted hover:text-popover-foreground disabled:pointer-events-none disabled:opacity-70'
 
 function Sidebar({
   activeApp,
@@ -82,6 +62,7 @@ function Sidebar({
   onCloseSidebar,
   onExportData,
   onImportData,
+  onProfile,
   onSignIn,
   onSignOut,
   sidebarOpen,
@@ -276,28 +257,25 @@ function Sidebar({
 
         {userMenuOpen && (
           <div
-            className="absolute inset-x-3 bottom-[calc(100%+8px)] grid gap-1 rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-[0_16px_40px_oklch(0_0_0/14%)]"
+            className="absolute inset-x-3 bottom-[calc(100%+8px)] grid gap-0 rounded-lg border border-border bg-popover p-1.5 font-sans text-popover-foreground shadow-[0_16px_40px_oklch(0_0_0/14%)]"
             role="menu"
           >
-            {!signedIn && (
+            {signedIn && (
               <Button
                 className={userMenuItemClassName}
                 variant="ghost"
                 type="button"
-                disabled={authLoading}
                 role="menuitem"
                 onClick={() => {
-                  onSignIn()
+                  onProfile()
                   setUserMenuOpen(false)
                 }}
               >
-                <LogIn size={16} />
-                <span className="font-semibold">
-                  {authLoading ? 'Checking...' : 'Sign in'}
-                </span>
-                <GoogleIcon className="ml-auto size-4" />
+                <UserRound size={16} />
+                <span>Profile</span>
               </Button>
             )}
+
             <Button
               className={userMenuItemClassName}
               variant="ghost"
@@ -324,7 +302,8 @@ function Sidebar({
               <Upload size={16} />
               <span>Import data</span>
             </Button>
-            {signedIn && (
+
+            {signedIn ? (
               <Button
                 className={userMenuItemClassName}
                 variant="ghost"
@@ -336,7 +315,22 @@ function Sidebar({
                 }}
               >
                 <LogOut size={16} />
-                <span>Sign out</span>
+                <span>Log out</span>
+              </Button>
+            ) : (
+              <Button
+                className={userMenuItemClassName}
+                variant="ghost"
+                type="button"
+                disabled={authLoading}
+                role="menuitem"
+                onClick={() => {
+                  onSignIn()
+                  setUserMenuOpen(false)
+                }}
+              >
+                <LogIn size={16} />
+                <span>{authLoading ? 'Checking...' : 'Log in'}</span>
               </Button>
             )}
           </div>

@@ -27,12 +27,108 @@ export async function signInWithGoogle() {
     provider: 'google',
     options: {
       redirectTo: window.location.origin,
+      queryParams: {
+        prompt: 'select_account',
+      },
     },
   })
 
   if (error) {
     throw error
   }
+}
+
+export async function signInWithPassword({ email, password }) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    if (error.message?.toLowerCase().includes('invalid login credentials')) {
+      throw new Error("Couldn't sign in with that email and password.")
+    }
+
+    throw error
+  }
+
+  return data
+}
+
+export async function signUpWithPassword({ email, password }) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  await assertEmailIsAvailable(email)
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: window.location.origin,
+    },
+  })
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+async function assertEmailIsAvailable(email) {
+  const response = await fetch('/api/auth-email-check', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  })
+
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(payload.error || 'Email availability check failed.')
+  }
+
+  if (payload.exists) {
+    throw new Error('This email is already in use.')
+  }
+}
+
+export async function sendPasswordReset(email) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  })
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function updatePassword(password) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  const { data, error } = await supabase.auth.updateUser({ password })
+
+  if (error) {
+    throw error
+  }
+
+  return data
 }
 
 export async function signOut() {
@@ -88,12 +184,15 @@ export async function fetchUserData(userId) {
   return data
 }
 
-export async function upsertUserData(user, masterData) {
+export async function upsertUserData(user, masterData, profileOverride = null) {
   if (!supabase) {
     throw new Error('Supabase is not configured.')
   }
 
-  const profile = getUserProfile(user)
+  const profile = {
+    ...getUserProfile(user),
+    ...(profileOverride || {}),
+  }
   const nextMasterData = normalizeMasterData(masterData)
 
   const { error } = await supabase.from(tableName).upsert({
