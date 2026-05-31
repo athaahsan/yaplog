@@ -1,5 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowLeft, Loader2, Save, Sparkles, Star } from 'lucide-react'
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Save,
+  Sparkles,
+  Star,
+} from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -47,6 +55,10 @@ const markdownPreviewClassName = cn(
   '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
 )
 
+const metadataDividerClassName = 'h-[0.5px] flex-1 bg-muted-foreground/25'
+const metadataDividerButtonClassName =
+  'rounded-lg px-2 text-muted-foreground/45 aria-expanded:bg-transparent aria-expanded:text-muted-foreground/45 hover:!bg-muted hover:!text-foreground dark:aria-expanded:bg-transparent dark:hover:!bg-muted/50'
+
 function JournalEditor({
   draft,
   hasUnsavedChanges,
@@ -63,6 +75,7 @@ function JournalEditor({
   const updateDraftRef = useRef(onUpdateDraft)
   const [isBodyEditing, setIsBodyEditing] = useState(false)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
+  const [metadataOpen, setMetadataOpen] = useState(false)
   const [titleStatus, setTitleStatus] = useState('idle')
   const [titleError, setTitleError] = useState('')
   const bodyCharCount = draft.body.trim().length
@@ -364,63 +377,107 @@ function JournalEditor({
           )}
         </div>
 
-        <div className="flex w-fit max-w-full items-center gap-2" aria-label="Entry mood">
-          {moodOptions.map((mood) => {
-            const moodName = moodNameMap[mood] || 'default'
-            const active = draft.mood === mood
-
-            return (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className={cn(
-                  'size-[34px] rounded-lg bg-transparent transition-transform duration-200 hover:-translate-y-0.5 hover:scale-[1.08] hover:bg-transparent',
-                  active && moodToneClassNames[moodName],
-                )}
-                type="button"
-                aria-label={`${moodName} mood`}
-                aria-pressed={active}
-                key={mood}
-                onClick={() => onUpdateDraft('mood', mood)}
-                title={moodName.charAt(0).toUpperCase() + moodName.slice(1)}
-              >
-                <span
-                  className={cn(
-                    'inline-block text-lg contrast-105 grayscale-[15%] transition-transform',
-                    active && 'scale-110 grayscale-0 contrast-125',
-                  )}
-                >
-                  {mood}
-                </span>
-              </Button>
-            )
-          })}
-
-          <div className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
-
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            type="button"
-            aria-pressed={draft.favorite}
+        <div
+          className={cn(
+            'flex-none overflow-hidden transition-[margin] duration-200 ease-out',
+            !metadataOpen && '-mt-5 mb-2',
+          )}
+        >
+          <div
             className={cn(
-              'size-[34px] rounded-lg text-muted-foreground hover:bg-transparent hover:text-foreground',
-              draft.favorite && 'text-foreground',
+              'flex w-fit max-w-full items-center gap-2 overflow-hidden transition-[max-height,opacity,transform,margin-bottom] duration-200 ease-out',
+              metadataOpen
+                ? 'mb-1.5 max-h-12 translate-y-0 opacity-100'
+                : 'mb-0 max-h-0 -translate-y-1 opacity-0',
             )}
-            onClick={() => onUpdateDraft('favorite', !draft.favorite)}
-            title={draft.favorite ? 'Unfavorite entry' : 'Favorite entry'}
+            aria-hidden={!metadataOpen}
+            aria-label="Entry mood and favorite"
           >
-            <Star
-              size={18}
-              className={cn(
-                'fill-transparent transition-transform',
-                draft.favorite && 'fill-current',
-              )}
-            />
-          </Button>
-        </div>
+            {moodOptions.map((mood) => {
+              const moodName = moodNameMap[mood] || 'default'
+              const active = draft.mood === mood
 
-        <div className="my-2 h-px flex-none bg-muted-foreground/25" aria-hidden="true" />
+              return (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className={cn(
+                    'size-[34px] rounded-lg bg-transparent transition-transform duration-200 hover:-translate-y-0.5 hover:scale-[1.08] hover:bg-transparent',
+                    active && moodToneClassNames[moodName],
+                  )}
+                  type="button"
+                  aria-label={`${moodName} mood`}
+                  aria-pressed={active}
+                  key={mood}
+                  onClick={() => onUpdateDraft('mood', mood)}
+                  tabIndex={metadataOpen ? 0 : -1}
+                  title={moodName.charAt(0).toUpperCase() + moodName.slice(1)}
+                >
+                  <span
+                    className={cn(
+                      'inline-block text-lg contrast-105 grayscale-[15%] transition-transform',
+                      active && 'scale-110 grayscale-0 contrast-125',
+                    )}
+                  >
+                    {mood}
+                  </span>
+                </Button>
+              )
+            })}
+
+            <div className="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
+
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              type="button"
+              aria-pressed={draft.favorite}
+              className={cn(
+                'size-[34px] rounded-lg text-muted-foreground hover:bg-transparent hover:text-foreground',
+                draft.favorite && 'text-foreground',
+              )}
+              onClick={() => onUpdateDraft('favorite', !draft.favorite)}
+              tabIndex={metadataOpen ? 0 : -1}
+              title={draft.favorite ? 'Unfavorite entry' : 'Favorite entry'}
+            >
+              <Star
+                size={18}
+                className={cn(
+                  'fill-transparent transition-transform',
+                  draft.favorite && 'fill-current',
+                )}
+              />
+            </Button>
+          </div>
+
+          <div
+            className={cn(
+              'flex items-center gap-2 transition-[height,margin] duration-200 ease-out',
+              metadataOpen ? 'my-2 h-8' : 'my-0.5 h-6',
+            )}
+          >
+            <div className={metadataDividerClassName} aria-hidden="true" />
+            <Button
+              className={cn(
+                metadataDividerButtonClassName,
+                metadataOpen ? 'h-8' : 'h-6',
+              )}
+              variant="ghost"
+              size="sm"
+              type="button"
+              aria-expanded={metadataOpen}
+              aria-label={metadataOpen ? 'Hide entry metadata' : 'Show entry metadata'}
+              title={metadataOpen ? 'Hide metadata' : 'Show metadata'}
+              onClick={() => setMetadataOpen((open) => !open)}
+            >
+              {metadataOpen ? (
+                <ChevronUp className="size-3.5 opacity-70" />
+              ) : (
+                <ChevronDown className="size-3.5 opacity-70" />
+              )}
+            </Button>
+          </div>
+        </div>
 
         {isBodyEditing ? (
           <textarea
