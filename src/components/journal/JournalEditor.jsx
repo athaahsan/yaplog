@@ -56,8 +56,8 @@ const markdownPreviewClassName = cn(
 )
 
 const metadataDividerClassName = 'h-[0.5px] flex-1 bg-muted-foreground/25'
-const metadataDividerButtonClassName =
-  'rounded-lg px-2 text-muted-foreground/45 aria-expanded:bg-transparent aria-expanded:text-muted-foreground/45 hover:!bg-muted hover:!text-foreground dark:aria-expanded:bg-transparent dark:hover:!bg-muted/50'
+const metadataDividerToggleClassName =
+  'group/metadata-toggle flex w-full items-center gap-2 rounded-lg border-0 bg-transparent p-0 text-muted-foreground/45 outline-none transition-[height,margin,color] duration-200 ease-out hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50'
 
 function JournalEditor({
   draft,
@@ -450,33 +450,38 @@ function JournalEditor({
             </Button>
           </div>
 
-          <div
+          <button
             className={cn(
-              'flex items-center gap-2 transition-[height,margin] duration-200 ease-out',
+              metadataDividerToggleClassName,
               metadataOpen ? 'my-2 h-8' : 'my-0.5 h-6',
             )}
+            type="button"
+            aria-expanded={metadataOpen}
+            aria-label={metadataOpen ? 'Hide entry metadata' : 'Show entry metadata'}
+            title={metadataOpen ? 'Hide metadata' : 'Show metadata'}
+            onClick={() => setMetadataOpen((open) => !open)}
           >
-            <div className={metadataDividerClassName} aria-hidden="true" />
-            <Button
+            <span
               className={cn(
-                metadataDividerButtonClassName,
+                metadataDividerClassName,
+                'transition-colors group-hover/metadata-toggle:bg-muted-foreground/40',
+              )}
+              aria-hidden="true"
+            />
+            <span
+              className={cn(
+                'grid place-items-center rounded-lg px-2 transition-[background-color,color] duration-200 group-hover/metadata-toggle:bg-muted dark:group-hover/metadata-toggle:bg-muted/50',
                 metadataOpen ? 'h-8' : 'h-6',
               )}
-              variant="ghost"
-              size="sm"
-              type="button"
-              aria-expanded={metadataOpen}
-              aria-label={metadataOpen ? 'Hide entry metadata' : 'Show entry metadata'}
-              title={metadataOpen ? 'Hide metadata' : 'Show metadata'}
-              onClick={() => setMetadataOpen((open) => !open)}
+              aria-hidden="true"
             >
               {metadataOpen ? (
                 <ChevronUp className="size-3.5 opacity-70" />
               ) : (
                 <ChevronDown className="size-3.5 opacity-70" />
               )}
-            </Button>
-          </div>
+            </span>
+          </button>
         </div>
 
         {isBodyEditing ? (
