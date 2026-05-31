@@ -52,7 +52,7 @@ const fontOptions = [
 
 const userMenuItemClassName =
   'h-8 justify-start gap-2 rounded-md px-2.5 text-[13px] leading-none text-popover-foreground hover:bg-muted/70 hover:text-popover-foreground disabled:pointer-events-none disabled:opacity-70'
-const userMenuDividerClassName = 'my-1 h-[0.5px] bg-border/60'
+const userMenuDividerClassName = 'my-1 h-px scale-y-50 bg-border'
 
 function Sidebar({
   activeApp,
@@ -99,7 +99,10 @@ function Sidebar({
       aria-label="Main navigation"
     >
       <header className="flex min-h-16 items-center gap-2.5 border-b border-sidebar-border px-[18px]">
-        <span className="flex-1 text-[17px] font-semibold underline decoration-double">
+        <span
+          className="flex-1 text-[17px] font-semibold underline decoration-double"
+          style={{ fontFamily: "'Space Mono', monospace" }}
+        >
           YapLog
         </span>
         <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
