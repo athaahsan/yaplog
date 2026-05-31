@@ -26,6 +26,7 @@ import {
   signOut,
   signUpWithPassword,
   updatePassword,
+  uploadUserAvatar,
   upsertUserData,
 } from './lib/yaplogUserData'
 import './App.css'
@@ -388,10 +389,19 @@ function App() {
     }
 
     setAuthError('')
-    setSavedAuthProfile(profile)
 
     try {
-      await upsertUserData(authUser, masterData, profile)
+      const avatarUrl = profile.avatarBlob
+        ? await uploadUserAvatar(authUser, profile.avatarBlob)
+        : profile.avatarUrl
+      const nextProfile = {
+        userName: profile.userName,
+        userEmail: profile.userEmail,
+        avatarUrl,
+      }
+
+      setSavedAuthProfile(nextProfile)
+      await upsertUserData(authUser, masterData, nextProfile)
     } catch (error) {
       setAuthError(error.message || 'Could not save your profile.')
       throw error

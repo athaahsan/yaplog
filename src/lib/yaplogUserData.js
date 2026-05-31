@@ -2,6 +2,7 @@ import { normalizeMasterData } from './masterData'
 import { supabase } from './supabaseClient'
 
 const tableName = 'yaplog_user_data'
+const avatarBucketName = 'yaplog_avatars'
 
 export function getUserProfile(user) {
   const metadata = user?.user_metadata || {}
@@ -131,6 +132,35 @@ export async function updatePassword(password) {
   return data
 }
 
+export async function uploadUserAvatar(user, avatarBlob) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  if (!user?.id) {
+    throw new Error('You need to be signed in to upload an avatar.')
+  }
+
+  const avatarPath = `${user.id}/avatar.webp`
+  const { error } = await supabase.storage
+    .from(avatarBucketName)
+    .upload(avatarPath, avatarBlob, {
+      cacheControl: '3600',
+      contentType: 'image/webp',
+      upsert: true,
+    })
+
+  if (error) {
+    throw error
+  }
+
+  const { data } = supabase.storage
+    .from(avatarBucketName)
+    .getPublicUrl(avatarPath)
+
+  return `${data.publicUrl}?v=${Date.now()}`
+}
+
 export async function signOut() {
   if (!supabase) {
     return
@@ -194,15 +224,31 @@ export async function upsertUserData(user, masterData, profileOverride = null) {
     ...(profileOverride || {}),
   }
   const nextMasterData = normalizeMasterData(masterData)
-
-  const { error } = await supabase.from(tableName).upsert({
+  const payload = {
     user_id: user.id,
     master_data: nextMasterData,
     updated_at: nextMasterData.updatedAt,
     user_name: profile.userName,
     user_email: profile.userEmail,
     avatar_url: profile.avatarUrl,
-  })
+  }
+
+  const { data: updatedRow, error: updateError } = await supabase
+    .from(tableName)
+    .update(payload)
+    .eq('user_id', user.id)
+    .select('user_id')
+    .maybeSingle()
+
+  if (updateError) {
+    throw updateError
+  }
+
+  if (updatedRow) {
+    return nextMasterData
+  }
+
+  const { error } = await supabase.from(tableName).insert(payload)
 
   if (error) {
     throw error

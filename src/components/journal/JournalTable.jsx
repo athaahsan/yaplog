@@ -18,6 +18,23 @@ const headerCellClassName =
 const bodyCellClassName =
   'h-[64px] whitespace-nowrap border-b border-border px-3.5 align-middle'
 
+function formatTableDateTime(value) {
+  const formatted = formatDateTime(value)
+  const lastCommaIndex = formatted.lastIndexOf(',')
+
+  if (lastCommaIndex === -1) {
+    return {
+      date: formatted,
+      time: '',
+    }
+  }
+
+  return {
+    date: formatted.slice(0, lastCommaIndex).trim(),
+    time: formatted.slice(lastCommaIndex + 1).trim(),
+  }
+}
+
 function normalizePreviewText(value) {
   return value.replace(/\s+/g, ' ').trim()
 }
@@ -63,6 +80,21 @@ function HighlightedText({ query, text }) {
     ) : (
       <span key={`${part}-${index}`}>{part}</span>
     ),
+  )
+}
+
+function DateTimeStack({ value }) {
+  const { date, time } = formatTableDateTime(value)
+
+  return (
+    <span className="grid gap-0.5 leading-tight">
+      <span>{date}</span>
+      {time && (
+        <span className="text-xs font-normal text-muted-foreground">
+          {time}
+        </span>
+      )}
+    </span>
   )
 }
 
@@ -215,17 +247,17 @@ function JournalTable({
                 </td>
                 <td className={bodyCellClassName}>
                   <span
-                    className="inline-grid size-7 place-items-center text-base leading-none"
+                    className="inline-grid size-8 place-items-center text-xl leading-none"
                     aria-label="Mood"
                   >
                     {entry.mood}
                   </span>
                 </td>
                 <td className={bodyCellClassName}>
-                  {formatDateTime(entry.createdAt)}
+                  <DateTimeStack value={entry.createdAt} />
                 </td>
                 <td className={bodyCellClassName}>
-                  {formatDateTime(entry.updatedAt)}
+                  <DateTimeStack value={entry.updatedAt} />
                 </td>
                 <td className={cn(bodyCellClassName, 'w-12 text-center')}>
                   <Button
