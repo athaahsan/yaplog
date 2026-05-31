@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import {
   CalendarDays,
   CheckSquare,
-  ChevronDown,
   Download,
   FileText,
   Laptop,
   LogIn,
   LogOut,
+  MoreHorizontal,
   Moon,
   NotebookPen,
   Sun,
@@ -51,7 +51,8 @@ const fontOptions = [
 ]
 
 const userMenuItemClassName =
-  'h-8 justify-start gap-2 rounded-md px-2.5 text-[13px] leading-none text-popover-foreground hover:bg-muted hover:text-popover-foreground disabled:pointer-events-none disabled:opacity-70'
+  'h-8 justify-start gap-2 rounded-md px-2.5 text-[13px] leading-none text-popover-foreground hover:bg-muted/70 hover:text-popover-foreground disabled:pointer-events-none disabled:opacity-70'
+const userMenuDividerClassName = 'my-1 h-[0.5px] bg-border/60'
 
 function Sidebar({
   activeApp,
@@ -221,7 +222,7 @@ function Sidebar({
         ref={userMenuRef}
       >
         <Button
-          className="grid h-auto w-full grid-cols-[36px_1fr_16px] items-center gap-2.5 rounded-lg p-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground aria-expanded:bg-sidebar-accent"
+          className="grid h-auto w-full grid-cols-[36px_1fr_18px] items-center gap-2.5 rounded-lg p-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground aria-expanded:bg-sidebar-accent/70"
           variant="ghost"
           type="button"
           aria-haspopup="menu"
@@ -252,28 +253,55 @@ function Sidebar({
               {displaySubtitle}
             </span>
           </span>
-          <ChevronDown size={16} aria-hidden="true" />
+          <MoreHorizontal
+            className="justify-self-end text-muted-foreground"
+            size={17}
+            aria-hidden="true"
+          />
         </Button>
 
         {userMenuOpen && (
           <div
-            className="absolute inset-x-3 bottom-[calc(100%+8px)] grid gap-0 rounded-lg border border-border bg-popover p-1.5 font-sans text-popover-foreground shadow-[0_16px_40px_oklch(0_0_0/14%)]"
+            className="absolute inset-x-3 bottom-[calc(100%+6px)] grid gap-0 rounded-lg border border-sidebar-border bg-popover/95 p-1 font-sans text-popover-foreground shadow-[0_12px_32px_oklch(0_0_0/12%)] backdrop-blur-md"
             role="menu"
           >
-            {signedIn && (
-              <Button
-                className={userMenuItemClassName}
-                variant="ghost"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onProfile()
-                  setUserMenuOpen(false)
-                }}
-              >
-                <UserRound size={16} />
-                <span>Profile</span>
-              </Button>
+            {signedIn ? (
+              <>
+                <Button
+                  className={userMenuItemClassName}
+                  variant="ghost"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onProfile()
+                    setUserMenuOpen(false)
+                  }}
+                >
+                  <UserRound size={16} />
+                  <span>Profile</span>
+                </Button>
+
+                <div className={userMenuDividerClassName} role="separator" />
+              </>
+            ) : (
+              <>
+                <Button
+                  className={userMenuItemClassName}
+                  variant="ghost"
+                  type="button"
+                  disabled={authLoading}
+                  role="menuitem"
+                  onClick={() => {
+                    onSignIn()
+                    setUserMenuOpen(false)
+                  }}
+                >
+                  <LogIn size={16} />
+                  <span>{authLoading ? 'Checking...' : 'Log in'}</span>
+                </Button>
+
+                <div className={userMenuDividerClassName} role="separator" />
+              </>
             )}
 
             <Button
@@ -303,7 +331,10 @@ function Sidebar({
               <span>Import data</span>
             </Button>
 
-            {signedIn ? (
+            {signedIn && (
+              <>
+                <div className={userMenuDividerClassName} role="separator" />
+
               <Button
                 className={userMenuItemClassName}
                 variant="ghost"
@@ -317,21 +348,7 @@ function Sidebar({
                 <LogOut size={16} />
                 <span>Log out</span>
               </Button>
-            ) : (
-              <Button
-                className={userMenuItemClassName}
-                variant="ghost"
-                type="button"
-                disabled={authLoading}
-                role="menuitem"
-                onClick={() => {
-                  onSignIn()
-                  setUserMenuOpen(false)
-                }}
-              >
-                <LogIn size={16} />
-                <span>{authLoading ? 'Checking...' : 'Log in'}</span>
-              </Button>
+              </>
             )}
           </div>
         )}
