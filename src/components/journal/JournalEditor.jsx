@@ -3,7 +3,9 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
+  Eye,
   Loader2,
+  PenLine,
   Save,
   Sparkles,
   Star,
@@ -45,7 +47,7 @@ const moodToneClassNames = {
 }
 
 const markdownPreviewClassName = cn(
-  'flex-none cursor-text text-[17px] leading-[1.65] text-foreground outline-none md:text-[17px]',
+  'flex-none text-[17px] leading-[1.65] text-foreground outline-none md:text-[17px]',
   '[&_blockquote]:mb-[0.9em] [&_blockquote]:border-l-[3px] [&_blockquote]:border-border [&_blockquote]:pl-[0.9em] [&_blockquote]:text-muted-foreground',
   '[&_code]:rounded-[5px] [&_code]:bg-muted [&_code]:px-[0.34em] [&_code]:py-[0.12em] [&_code]:text-[0.9em]',
   '[&_h1]:mb-[0.45em] [&_h1]:mt-[1.15em] [&_h1]:text-[1.55em] [&_h1]:leading-[1.2]',
@@ -62,6 +64,7 @@ const metadataDividerToggleClassName =
 function JournalEditor({
   draft,
   hasUnsavedChanges,
+  initialBodyMode = 'preview',
   moodOptions,
   onBack,
   onSave,
@@ -73,7 +76,7 @@ function JournalEditor({
   const pendingScrollTopRef = useRef(null)
   const titleRequestIdRef = useRef(0)
   const updateDraftRef = useRef(onUpdateDraft)
-  const [isBodyEditing, setIsBodyEditing] = useState(false)
+  const [bodyMode, setBodyMode] = useState(initialBodyMode)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
   const [titleStatus, setTitleStatus] = useState('idle')
@@ -83,6 +86,7 @@ function JournalEditor({
     !draft.title.trim() &&
     bodyCharCount >= TITLE_ASSISTANT_MIN_CHARS &&
     bodyCharCount <= AI_ASSISTANT_MAX_CHARS
+  const isBodyEditing = bodyMode === 'edit'
 
   function restoreEditorScroll(scrollTop) {
     const scrollContainer = editorScrollRef.current
@@ -192,6 +196,18 @@ function JournalEditor({
     bodyInput.focus({ preventScroll: true })
   }, [isBodyEditing])
 
+  function updateBodyMode(nextMode) {
+    if (nextMode === bodyMode) {
+      return
+    }
+
+    if (nextMode === 'edit') {
+      pendingScrollTopRef.current = editorScrollRef.current?.scrollTop ?? 0
+    }
+
+    setBodyMode(nextMode)
+  }
+
   async function suggestTitle() {
     const body = draft.body.trim()
 
@@ -228,13 +244,6 @@ function JournalEditor({
     }
   }
 
-  function startBodyEditing() {
-    if (!isBodyEditing) {
-      pendingScrollTopRef.current = editorScrollRef.current?.scrollTop ?? 0
-      setIsBodyEditing(true)
-    }
-  }
-
   function rememberEditorScroll({ force = false } = {}) {
     if (pendingScrollTopRef.current !== null && !force) {
       return
@@ -255,18 +264,6 @@ function JournalEditor({
       event.key === 'Enter'
     ) {
       rememberEditorScroll({ force: true })
-    }
-  }
-
-  function handlePreviewPointerDown(event) {
-    event.preventDefault()
-    startBodyEditing()
-  }
-
-  function handlePreviewKeyDown(event) {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      startBodyEditing()
     }
   }
 
@@ -484,6 +481,47 @@ function JournalEditor({
           </button>
         </div>
 
+        <div
+          className="flex w-fit items-center gap-0.5 rounded-lg border border-border bg-muted/20 p-0.5"
+          aria-label="Journal body mode"
+          role="radiogroup"
+        >
+          <Button
+            className={cn(
+              'size-8 rounded-md border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
+              bodyMode === 'preview' &&
+              'border-border bg-background text-foreground shadow-sm hover:bg-background',
+            )}
+            variant="ghost"
+            size="icon-sm"
+            type="button"
+            role="radio"
+            aria-checked={bodyMode === 'preview'}
+            aria-label="Preview entry"
+            title="Preview"
+            onClick={() => updateBodyMode('preview')}
+          >
+            <Eye className="size-4" />
+          </Button>
+          <Button
+            className={cn(
+              'size-8 rounded-md border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
+              bodyMode === 'edit' &&
+              'border-border bg-background text-foreground shadow-sm hover:bg-background',
+            )}
+            variant="ghost"
+            size="icon-sm"
+            type="button"
+            role="radio"
+            aria-checked={bodyMode === 'edit'}
+            aria-label="Edit entry"
+            title="Edit"
+            onClick={() => updateBodyMode('edit')}
+          >
+            <PenLine className="size-4" />
+          </Button>
+        </div>
+
         {isBodyEditing ? (
           <textarea
             ref={bodyInputRef}
@@ -491,7 +529,6 @@ function JournalEditor({
             value={draft.body}
             maxLength={JOURNAL_BODY_MAX_CHARS}
             placeholder="Start writing..."
-            onBlur={() => setIsBodyEditing(false)}
             onBeforeInput={() => rememberEditorScroll({ force: true })}
             onChange={updateBody}
             onKeyDown={handleBodyKeyDown}
@@ -499,11 +536,8 @@ function JournalEditor({
         ) : (
           <div
             className={cn(markdownPreviewClassName, 'max-md:text-base')}
-            role="textbox"
-            tabIndex={0}
+            role="document"
             aria-label="Journal content"
-            onKeyDown={handlePreviewKeyDown}
-            onPointerDown={handlePreviewPointerDown}
           >
             {draft.body.trim() ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>

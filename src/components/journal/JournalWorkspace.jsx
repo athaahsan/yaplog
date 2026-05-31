@@ -224,6 +224,7 @@ function JournalWorkspace({ entries, onEntriesChange }) {
       <JournalEditor
         draft={entryDraft}
         hasUnsavedChanges={hasDraftChanged(entryDraft, initialEntryDraft)}
+        initialBodyMode={editingEntryId ? 'preview' : 'edit'}
         moodOptions={moodOptions}
         onBack={closeEditor}
         onSave={saveEntry}
