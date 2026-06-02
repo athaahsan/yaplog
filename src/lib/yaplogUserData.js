@@ -233,22 +233,9 @@ export async function upsertUserData(user, masterData, profileOverride = null) {
     avatar_url: profile.avatarUrl,
   }
 
-  const { data: updatedRow, error: updateError } = await supabase
+  const { error } = await supabase
     .from(tableName)
-    .update(payload)
-    .eq('user_id', user.id)
-    .select('user_id')
-    .maybeSingle()
-
-  if (updateError) {
-    throw updateError
-  }
-
-  if (updatedRow) {
-    return nextMasterData
-  }
-
-  const { error } = await supabase.from(tableName).insert(payload)
+    .upsert(payload, { onConflict: 'user_id' })
 
   if (error) {
     throw error

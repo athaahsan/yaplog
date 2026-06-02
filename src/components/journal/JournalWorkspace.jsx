@@ -1,4 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  Navigate,
+  useBlocker,
+  useMatch,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
 import { moodOptions } from '../../data/journalConfig'
 import {
   downloadMarkdownEntriesZip,
@@ -17,10 +24,31 @@ function toggleListValue(value, setter) {
 }
 
 function JournalWorkspace({ entries, onEntriesChange }) {
-  const [journalMode, setJournalMode] = useState('table')
-  const [editingEntryId, setEditingEntryId] = useState(null)
-  const [entryDraft, setEntryDraft] = useState(null)
-  const [initialEntryDraft, setInitialEntryDraft] = useState(null)
+  const isNewEntryRoute = Boolean(useMatch('/journal/new'))
+  const { entryId } = useParams()
+
+  if (isNewEntryRoute || entryId) {
+    return (
+      <JournalEditorRoute
+        entries={entries}
+        entryId={entryId}
+        isNewEntry={isNewEntryRoute}
+        key={isNewEntryRoute ? 'new' : entryId}
+        onEntriesChange={onEntriesChange}
+      />
+    )
+  }
+
+  return (
+    <JournalTableRoute
+      entries={entries}
+      onEntriesChange={onEntriesChange}
+    />
+  )
+}
+
+function JournalTableRoute({ entries, onEntriesChange }) {
+  const navigate = useNavigate()
   const [selectedEntryIds, setSelectedEntryIds] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMoods, setSelectedMoods] = useState([])
@@ -164,73 +192,11 @@ function JournalWorkspace({ entries, onEntriesChange }) {
   }
 
   function openNewEntry() {
-    const nextDraft = {
-      title: '',
-      body: '',
-      mood: moodOptions[1],
-      favorite: false,
-    }
-
-    setEditingEntryId(null)
-    setEntryDraft(nextDraft)
-    setInitialEntryDraft(nextDraft)
-    setJournalMode('editor')
+    navigate('/journal/new')
   }
 
   function openEntry(entry) {
-    const nextDraft = { ...entry }
-
-    setEditingEntryId(entry.id)
-    setEntryDraft(nextDraft)
-    setInitialEntryDraft(nextDraft)
-    setJournalMode('editor')
-  }
-
-  function updateEntryDraft(field, value) {
-    setEntryDraft((draft) => ({ ...draft, [field]: value }))
-  }
-
-  function closeEditor() {
-    setJournalMode('table')
-    setEditingEntryId(null)
-    setEntryDraft(null)
-    setInitialEntryDraft(null)
-  }
-
-  function saveEntry() {
-    const title = entryDraft.title.trim() || 'Untitled entry'
-    const savedAt = new Date().toISOString()
-    const savedEntry = {
-      ...entryDraft,
-      id: editingEntryId || `entry-${Date.now()}`,
-      title,
-      createdAt: entryDraft.createdAt || savedAt,
-      updatedAt: savedAt,
-      body: entryDraft.body.trim(),
-    }
-
-    onEntriesChange((currentEntries) =>
-      editingEntryId
-        ? currentEntries.map((entry) =>
-            entry.id === editingEntryId ? savedEntry : entry,
-          )
-        : [savedEntry, ...currentEntries],
-    )
-    closeEditor()
-  }
-
-  if (journalMode === 'editor' && entryDraft) {
-    return (
-      <JournalEditor
-        draft={entryDraft}
-        hasUnsavedChanges={hasDraftChanged(entryDraft, initialEntryDraft)}
-        initialBodyMode={editingEntryId ? 'preview' : 'edit'}
-        moodOptions={moodOptions}
-        onBack={closeEditor}
-        onSave={saveEntry}
-        onUpdateDraft={updateEntryDraft}
-      />
-    )
+    navigate(`/journal/${encodeURIComponent(entry.id)}`)
   }
 
   return (
@@ -284,6 +250,100 @@ function JournalWorkspace({ entries, onEntriesChange }) {
       />
     </div>
   )
+}
+
+function JournalEditorRoute({ entries, entryId, isNewEntry, onEntriesChange }) {
+  const navigate = useNavigate()
+  const allowNavigationRef = useRef(false)
+  const initialDraft = isNewEntry
+    ? getDefaultEntryDraft()
+    : entries.find((entry) => entry.id === entryId)
+  const [entryDraft, setEntryDraft] = useState(() =>
+    initialDraft ? { ...initialDraft } : null,
+  )
+  const [initialEntryDraft] = useState(() =>
+    initialDraft ? { ...initialDraft } : null,
+  )
+  const hasUnsavedChanges = hasDraftChanged(entryDraft, initialEntryDraft)
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (allowNavigationRef.current) {
+      return false
+    }
+
+    return (
+      hasUnsavedChanges &&
+      currentLocation.pathname !== nextLocation.pathname
+    )
+  })
+
+  useEffect(() => {
+    if (blocker.state !== 'blocked') {
+      return
+    }
+
+    if (window.confirm('Discard unsaved changes and leave this entry?')) {
+      blocker.proceed()
+    } else {
+      blocker.reset()
+    }
+  }, [blocker])
+
+  if (!entryDraft || !initialEntryDraft) {
+    return <Navigate to="/journal" replace />
+  }
+
+  function updateEntryDraft(field, value) {
+    setEntryDraft((draft) => ({ ...draft, [field]: value }))
+  }
+
+  function closeEditor() {
+    allowNavigationRef.current = true
+    navigate('/journal', { replace: true })
+  }
+
+  function saveEntry() {
+    const title = entryDraft.title.trim() || 'Untitled entry'
+    const savedAt = new Date().toISOString()
+    const savedEntry = {
+      ...entryDraft,
+      id: entryId || `entry-${Date.now()}`,
+      title,
+      createdAt: entryDraft.createdAt || savedAt,
+      updatedAt: savedAt,
+      body: entryDraft.body.trim(),
+    }
+
+    allowNavigationRef.current = true
+    onEntriesChange((currentEntries) =>
+      entryId
+        ? currentEntries.map((entry) =>
+            entry.id === entryId ? savedEntry : entry,
+          )
+        : [savedEntry, ...currentEntries],
+    )
+    navigate('/journal', { replace: true })
+  }
+
+  return (
+    <JournalEditor
+      draft={entryDraft}
+      hasUnsavedChanges={hasUnsavedChanges}
+      initialBodyMode={entryId ? 'preview' : 'edit'}
+      moodOptions={moodOptions}
+      onBack={closeEditor}
+      onSave={saveEntry}
+      onUpdateDraft={updateEntryDraft}
+    />
+  )
+}
+
+function getDefaultEntryDraft() {
+  return {
+    title: '',
+    body: '',
+    mood: moodOptions[1],
+    favorite: false,
+  }
 }
 
 function hasDraftChanged(draft, initialDraft) {
