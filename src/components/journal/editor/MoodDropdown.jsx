@@ -12,6 +12,8 @@ const moodNameMap = {
   'ðŸ˜¡': 'angry',
 }
 
+const moodNames = ['happy', 'neutral', 'sad', 'done', 'anxious', 'angry']
+
 const moodToneClassNames = {
   angry:
     'bg-[color-mix(in_oklch,oklch(0.66_0.19_35)_18%,transparent)] shadow-[0_0_12px_oklch(0.66_0.19_35/15%),inset_0_0_0_1px_oklch(0.66_0.19_35/40%)]',
@@ -43,66 +45,64 @@ function MoodDropdown({ moodOptions, value, onChange }) {
   }, [])
 
   return (
-    <div className="relative z-30 flex w-fit items-center">
-      <div className="relative" ref={menuRef}>
-        <Button
-          className="h-8 gap-1.5 rounded-lg border border-border bg-muted/20 px-2 text-muted-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground"
-          variant="ghost"
-          size="sm"
-          type="button"
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-label="Choose entry mood"
-          title="Mood"
-          onClick={() => setOpen((currentOpen) => !currentOpen)}
+    <div className="relative z-30 flex w-fit items-center" ref={menuRef}>
+      <Button
+        className="h-8 gap-1.5 rounded-lg border border-border bg-muted/20 px-2 text-muted-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground"
+        variant="ghost"
+        size="sm"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Choose entry mood"
+        title="Mood"
+        onClick={() => setOpen((currentOpen) => !currentOpen)}
+      >
+        <span className="text-lg leading-none">{value}</span>
+        <ChevronDown className="size-3.5 opacity-70" />
+      </Button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-[calc(100%+6px)] z-40 flex items-center gap-1 rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-[0_12px_32px_oklch(0_0_0/12%)]"
+          role="listbox"
+          aria-label="Entry mood"
         >
-          <span className="text-lg leading-none">{value}</span>
-          <ChevronDown className="size-3.5 opacity-70" />
-        </Button>
+          {moodOptions.map((mood, index) => {
+            const moodName = moodNames[index] || moodNameMap[mood] || 'default'
+            const active = value === mood
 
-        {open && (
-          <div
-            className="absolute left-0 top-[calc(100%+6px)] z-40 flex items-center gap-1 rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-[0_12px_32px_oklch(0_0_0/12%)]"
-            role="listbox"
-            aria-label="Entry mood"
-          >
-            {moodOptions.map((mood) => {
-              const moodName = moodNameMap[mood] || 'default'
-              const active = value === mood
-
-              return (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
+            return (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className={cn(
+                  'size-[34px] rounded-lg bg-transparent transition-transform duration-200 hover:-translate-y-0.5 hover:scale-[1.08] hover:bg-transparent',
+                  active && moodToneClassNames[moodName],
+                )}
+                type="button"
+                aria-label={`${moodName} mood`}
+                aria-selected={active}
+                role="option"
+                key={mood}
+                onClick={() => {
+                  onChange(mood)
+                  setOpen(false)
+                }}
+                title={moodName.charAt(0).toUpperCase() + moodName.slice(1)}
+              >
+                <span
                   className={cn(
-                    'size-[34px] rounded-lg bg-transparent transition-transform duration-200 hover:-translate-y-0.5 hover:scale-[1.08] hover:bg-transparent',
-                    active && moodToneClassNames[moodName],
+                    'inline-block text-lg contrast-105 grayscale-[15%] transition-transform',
+                    active && 'scale-110 grayscale-0 contrast-125',
                   )}
-                  type="button"
-                  aria-label={`${moodName} mood`}
-                  aria-selected={active}
-                  role="option"
-                  key={mood}
-                  onClick={() => {
-                    onChange(mood)
-                    setOpen(false)
-                  }}
-                  title={moodName.charAt(0).toUpperCase() + moodName.slice(1)}
                 >
-                  <span
-                    className={cn(
-                      'inline-block text-lg contrast-105 grayscale-[15%] transition-transform',
-                      active && 'scale-110 grayscale-0 contrast-125',
-                    )}
-                  >
-                    {mood}
-                  </span>
-                </Button>
-              )
-            })}
-          </div>
-        )}
-      </div>
+                  {mood}
+                </span>
+              </Button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
