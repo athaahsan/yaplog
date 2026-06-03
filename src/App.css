@@ -136,3 +136,7 @@
     @apply font-sans;
   }
 }
+
+.journal-table tbody tr:last-child > td {
+  border-bottom: 0;
+}

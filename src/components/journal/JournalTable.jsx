@@ -1,12 +1,20 @@
-import { ArrowDownUp, ChevronDown, ChevronUp, Star } from 'lucide-react'
+import {
+  ArrowDownUp,
+  AlignLeft,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Star,
+  Tag,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatDateTime } from '../../lib/dateTime'
 
 const sortableColumns = {
-  createdAt: 'Created time',
-  title: 'Entry',
-  updatedAt: 'Last edited time',
+  createdAt: { icon: Calendar, label: 'Created time' },
+  title: { icon: AlignLeft, label: 'Entry' },
+  updatedAt: { icon: Calendar, label: 'Last edited time' },
 }
 
 const checkboxClassName =
@@ -112,6 +120,8 @@ function JournalTable({
 }) {
   function renderSortableHeader(key) {
     const isActive = sortConfig.key === key
+    const column = sortableColumns[key]
+    const ColumnIcon = column.icon
     const SortIcon = isActive
       ? sortConfig.direction === 'asc'
         ? ChevronUp
@@ -130,7 +140,8 @@ function JournalTable({
         )}
         onClick={() => onUpdateSort(key)}
       >
-        <span>{sortableColumns[key]}</span>
+        <ColumnIcon className="size-[14px] opacity-80" strokeWidth={2.7} />
+        <span>{column.label}</span>
         <SortIcon
           className={cn(
             'size-[13px] opacity-65',
@@ -151,13 +162,13 @@ function JournalTable({
 
   return (
     <div className="relative max-h-[calc(100dvh-174px)] overflow-auto rounded-lg border border-border bg-background [contain:layout_paint] [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_55%,transparent)_transparent] [scrollbar-width:thin] max-[720px]:max-h-[calc(100dvh-216px)] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-track]:bg-transparent">
-      <table className="w-full min-w-[760px] border-collapse text-sm text-foreground">
+      <table className="journal-table w-full min-w-[760px] border-collapse text-sm text-foreground">
         <thead>
           <tr>
             <th
               className={cn(
                 headerCellClassName,
-                'left-0 z-40 w-11 cursor-pointer',
+                'w-11 cursor-pointer',
               )}
               onClick={onToggleSelectAll}
             >
@@ -176,7 +187,12 @@ function JournalTable({
             >
               {renderSortableHeader('title')}
             </th>
-            <th className={headerCellClassName}>Mood</th>
+            <th className={headerCellClassName}>
+              <span className="inline-flex items-center gap-1.5">
+                <Tag className="size-[14px] opacity-80" strokeWidth={2.7} />
+                <span>Mood</span>
+              </span>
+            </th>
             <th
               className={headerCellClassName}
               aria-sort={getSortDirection('createdAt')}
@@ -209,7 +225,7 @@ function JournalTable({
                 <td
                   className={cn(
                     bodyCellClassName,
-                    'sticky left-0 z-30 w-11 cursor-pointer bg-background group-hover:bg-accent group-focus-visible:bg-accent',
+                    'w-11 cursor-pointer',
                   )}
                   onClick={(event) => {
                     event.stopPropagation()
@@ -293,7 +309,7 @@ function JournalTable({
         </tbody>
       </table>
       {entries.length === 0 && (
-        <div className="grid min-h-30 place-items-center border-t border-border text-sm text-muted-foreground">
+        <div className="grid min-h-30 place-items-center text-sm text-muted-foreground">
           No entries found.
         </div>
       )}

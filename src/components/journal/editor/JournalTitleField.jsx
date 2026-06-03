@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Loader2, WandSparkles } from 'lucide-react'
+import { Loader2, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   AI_ASSISTANT_MAX_CHARS,
@@ -126,7 +126,7 @@ function JournalTitleField({ body, title, onChange }) {
             {status === 'loading' ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
-              <WandSparkles className="size-3.5" />
+              <Sparkles className="size-3.5" />
             )}
           </Button>
         </div>
