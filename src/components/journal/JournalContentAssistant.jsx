@@ -1,4 +1,8 @@
-import { ChevronDown, ChevronUp, Loader2, Sparkles } from 'lucide-react'
+import {
+  AlignLeft,
+  Loader2,
+  Sparkles,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,8 +13,10 @@ import {
 
 const assistantDividerClassName =
   'h-[0.5px] flex-1 bg-muted-foreground/25'
-const assistantDividerButtonClassName =
-  'h-8 rounded-lg px-2 text-muted-foreground hover:text-foreground'
+const assistantToggleButtonClassName =
+  'grid size-8 place-items-center text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45'
+const assistantToggleActiveClassName =
+  'bg-muted text-foreground shadow-sm'
 
 function tokenizeDiffText(value) {
   return value.match(/\s+|[^\s]+/g) || []
@@ -98,9 +104,7 @@ function buildDiffParts(original, suggested) {
   return parts.reverse()
 }
 
-function DiffPreview({ original, suggested }) {
-  const parts = buildDiffParts(original, suggested)
-
+function DiffPreview({ parts }) {
   return parts.map((part, index) => {
     const whitespaceOnly = !part.value.trim()
     const displayValue = whitespaceOnly
@@ -137,11 +141,18 @@ function DiffPreview({ original, suggested }) {
   })
 }
 
-function JournalContentAssistant({ body, onApplyContent }) {
+function JournalContentAssistant({
+  body,
+  children,
+  onApplyContent,
+  onResultActiveChange = () => {},
+}) {
   const [status, setStatus] = useState('idle')
+  const [diffParts, setDiffParts] = useState([])
   const [suggestedContent, setSuggestedContent] = useState('')
   const [suggestionBody, setSuggestionBody] = useState('')
   const [error, setError] = useState('')
+  const [viewMode, setViewMode] = useState('original')
   const requestControllerRef = useRef(null)
   const bodyCharCount = body.trim().length
   const canAssist =
@@ -149,7 +160,8 @@ function JournalContentAssistant({ body, onApplyContent }) {
     bodyCharCount <= AI_ASSISTANT_MAX_CHARS
   const suggestionMatchesBody = !suggestionBody || suggestionBody === body
   const assistantStatus = suggestionMatchesBody ? status : 'idle'
-  const panelOpen = canAssist && assistantStatus !== 'idle'
+  const compareOpen =
+    canAssist && viewMode === 'compare' && assistantStatus !== 'idle'
 
   useEffect(() => {
     return () => {
@@ -169,10 +181,26 @@ function JournalContentAssistant({ body, onApplyContent }) {
   function resetSuggestion() {
     requestControllerRef.current?.abort()
     requestControllerRef.current = null
+    onResultActiveChange(false)
+    setViewMode('original')
     setStatus('idle')
+    setDiffParts([])
     setSuggestedContent('')
     setSuggestionBody('')
     setError('')
+  }
+
+  function closeCompare() {
+    setViewMode('original')
+  }
+
+  function openCompare() {
+    if (assistantStatus === 'success') {
+      setViewMode('compare')
+      return
+    }
+
+    generateSuggestion()
   }
 
   async function generateSuggestion() {
@@ -180,7 +208,10 @@ function JournalContentAssistant({ body, onApplyContent }) {
 
     const controller = new AbortController()
     requestControllerRef.current = controller
+    onResultActiveChange(false)
+    setViewMode('compare')
     setStatus('loading')
+    setDiffParts([])
     setSuggestedContent('')
     setSuggestionBody(body)
     setError('')
@@ -192,8 +223,13 @@ function JournalContentAssistant({ body, onApplyContent }) {
         signal: controller.signal,
       })
 
-      setSuggestedContent(result.content || '')
+      const nextSuggestedContent = result.content || ''
+      const nextDiffParts = buildDiffParts(body, nextSuggestedContent)
+
+      setDiffParts(nextDiffParts)
+      setSuggestedContent(nextSuggestedContent)
       setStatus('success')
+      onResultActiveChange(true)
     } catch (requestError) {
       if (requestError.name === 'AbortError') {
         return
@@ -201,6 +237,7 @@ function JournalContentAssistant({ body, onApplyContent }) {
 
       setError(requestError.message || 'Could not polish this entry.')
       setStatus('error')
+      onResultActiveChange(false)
     } finally {
       if (requestControllerRef.current === controller) {
         requestControllerRef.current = null
@@ -217,52 +254,52 @@ function JournalContentAssistant({ body, onApplyContent }) {
   }
 
   return (
-    <section
-      className="my-2 flex-none overflow-hidden text-foreground animate-in fade-in-0 slide-in-from-top-1"
-      aria-label="Content assistant"
-    >
-      {!panelOpen ? (
-        <div className="flex h-8 items-center gap-2">
-          {canAssist ? (
-            <>
-              <div className={assistantDividerClassName} aria-hidden="true" />
-              <Button
-                className={`${assistantDividerButtonClassName} animate-in fade-in-0 zoom-in-95`}
-                variant="ghost"
-                size="sm"
+    <section className="flex-none text-foreground" aria-label="Content assistant">
+      <div className="mb-4 flex h-8 items-center gap-2">
+        {canAssist ? (
+          <>
+            <div className={assistantDividerClassName} aria-hidden="true" />
+            <div
+              className="flex overflow-hidden rounded-lg border border-border bg-background/35 animate-in fade-in-0 zoom-in-95 duration-200"
+              role="group"
+              aria-label="Content view"
+            >
+              <button
+                className={`${assistantToggleButtonClassName} ${
+                  !compareOpen ? assistantToggleActiveClassName : ''
+                }`}
                 type="button"
-                aria-label="Polish entry"
-                title="Polish entry"
-                onClick={generateSuggestion}
+                aria-label="Show original entry"
+                aria-pressed={!compareOpen}
+                title="Show original entry"
+                onClick={closeCompare}
+              >
+                <AlignLeft className="size-3.5" />
+              </button>
+              <button
+                className={`${assistantToggleButtonClassName} border-l border-border ${
+                  compareOpen ? assistantToggleActiveClassName : ''
+                }`}
+                type="button"
+                aria-label="Show AI polish"
+                aria-pressed={compareOpen}
+                title="Show AI polish"
+                onClick={openCompare}
               >
                 <Sparkles className="size-3.5" />
-                <ChevronDown className="size-3.5 opacity-70" />
-              </Button>
-              <div className={assistantDividerClassName} aria-hidden="true" />
-            </>
-          ) : (
-            <div className="h-px flex-1 bg-transparent" aria-hidden="true" />
-          )}
-        </div>
-      ) : (
-        <div className="border-b border-muted-foreground/25 animate-in fade-in-0 slide-in-from-top-1 duration-200">
-          <div className="flex h-8 items-center gap-2">
+              </button>
+            </div>
             <div className={assistantDividerClassName} aria-hidden="true" />
-            <Button
-              className={assistantDividerButtonClassName}
-              variant="ghost"
-              size="sm"
-              type="button"
-              aria-label="Collapse content suggestion"
-              title="Collapse suggestion"
-              onClick={resetSuggestion}
-            >
-              <Sparkles className="size-3.5" />
-              <ChevronUp className="size-3.5 opacity-70" />
-            </Button>
-            <div className={assistantDividerClassName} aria-hidden="true" />
-          </div>
+          </>
+        ) : (
+          <div className={assistantDividerClassName} aria-hidden="true" />
+        )}
+      </div>
 
+      {!compareOpen ? (
+        children
+      ) : (
+        <div className="animate-in fade-in-0 slide-in-from-right-1 duration-200">
           <div className="min-w-0 overflow-hidden pb-3">
             {assistantStatus === 'loading' && (
               <div className="grid min-h-28 place-items-center text-sm text-muted-foreground">
@@ -278,7 +315,12 @@ function JournalContentAssistant({ body, onApplyContent }) {
                 <p className="text-foreground">Could not polish this entry.</p>
                 <p className="text-muted-foreground">{error}</p>
                 <div>
-                  <Button variant="secondary" size="sm" type="button" onClick={generateSuggestion}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={generateSuggestion}
+                  >
                     Retry
                   </Button>
                 </div>
@@ -286,11 +328,8 @@ function JournalContentAssistant({ body, onApplyContent }) {
             )}
 
             {assistantStatus === 'success' && (
-              <div className="min-w-0 max-w-full whitespace-pre-wrap break-words bg-muted/50 py-1 text-[17px] leading-[1.65] [overflow-wrap:anywhere]">
-                <DiffPreview
-                  original={suggestionBody}
-                  suggested={suggestedContent}
-                />
+              <div className="min-w-0 max-w-full whitespace-pre-wrap break-words bg-muted/50 py-1 text-[17px] leading-[1.65] [overflow-wrap:anywhere] animate-in fade-in-0 slide-in-from-right-1 duration-200 max-md:text-base">
+                <DiffPreview parts={diffParts} />
               </div>
             )}
           </div>
@@ -298,7 +337,12 @@ function JournalContentAssistant({ body, onApplyContent }) {
           {assistantStatus === 'success' && (
             <footer className="flex items-center justify-end gap-2 pb-3">
               <div className="flex flex-none items-center gap-2">
-                <Button variant="ghost" size="sm" type="button" onClick={resetSuggestion}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={resetSuggestion}
+                >
                   Reject
                 </Button>
                 <Button

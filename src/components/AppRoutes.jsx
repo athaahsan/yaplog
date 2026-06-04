@@ -2,7 +2,13 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import JournalWorkspace from './journal/JournalWorkspace'
 import PlaceholderWorkspace from './PlaceholderWorkspace'
 
-function AppRoutes({ authScopeKey, entries, onEntriesChange }) {
+function AppRoutes({
+  authScopeKey,
+  entries,
+  onEntriesChange,
+  voiceInputEnabled,
+  voiceInputUserId,
+}) {
   const location = useLocation()
   const journalRedirect = {
     pathname: '/journal',
@@ -20,6 +26,8 @@ function AppRoutes({ authScopeKey, entries, onEntriesChange }) {
             entries={entries}
             key={authScopeKey}
             onEntriesChange={onEntriesChange}
+            voiceInputEnabled={voiceInputEnabled}
+            voiceInputUserId={voiceInputUserId}
           />
         }
       />
@@ -30,6 +38,8 @@ function AppRoutes({ authScopeKey, entries, onEntriesChange }) {
             entries={entries}
             key={`${authScopeKey}-new`}
             onEntriesChange={onEntriesChange}
+            voiceInputEnabled={voiceInputEnabled}
+            voiceInputUserId={voiceInputUserId}
           />
         }
       />
@@ -40,6 +50,8 @@ function AppRoutes({ authScopeKey, entries, onEntriesChange }) {
             entries={entries}
             key={authScopeKey}
             onEntriesChange={onEntriesChange}
+            voiceInputEnabled={voiceInputEnabled}
+            voiceInputUserId={voiceInputUserId}
           />
         }
       />

@@ -23,7 +23,12 @@ function toggleListValue(value, setter) {
   )
 }
 
-function JournalWorkspace({ entries, onEntriesChange }) {
+function JournalWorkspace({
+  entries,
+  onEntriesChange,
+  voiceInputEnabled,
+  voiceInputUserId,
+}) {
   const isNewEntryRoute = Boolean(useMatch('/journal/new'))
   const { entryId } = useParams()
 
@@ -35,6 +40,8 @@ function JournalWorkspace({ entries, onEntriesChange }) {
         isNewEntry={isNewEntryRoute}
         key={isNewEntryRoute ? 'new' : entryId}
         onEntriesChange={onEntriesChange}
+        voiceInputEnabled={voiceInputEnabled}
+        voiceInputUserId={voiceInputUserId}
       />
     )
   }
@@ -252,7 +259,14 @@ function JournalTableRoute({ entries, onEntriesChange }) {
   )
 }
 
-function JournalEditorRoute({ entries, entryId, isNewEntry, onEntriesChange }) {
+function JournalEditorRoute({
+  entries,
+  entryId,
+  isNewEntry,
+  onEntriesChange,
+  voiceInputEnabled,
+  voiceInputUserId,
+}) {
   const navigate = useNavigate()
   const allowNavigationRef = useRef(false)
   const initialDraft = isNewEntry
@@ -328,11 +342,13 @@ function JournalEditorRoute({ entries, entryId, isNewEntry, onEntriesChange }) {
     <JournalEditor
       draft={entryDraft}
       hasUnsavedChanges={hasUnsavedChanges}
-      initialBodyMode={entryId ? 'preview' : 'edit'}
+      initialBodyMode="preview"
       moodOptions={moodOptions}
       onBack={closeEditor}
       onSave={saveEntry}
       onUpdateDraft={updateEntryDraft}
+      voiceInputEnabled={voiceInputEnabled}
+      voiceInputUserId={voiceInputUserId}
     />
   )
 }

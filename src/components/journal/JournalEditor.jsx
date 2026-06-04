@@ -14,6 +14,8 @@ function JournalEditor({
   onBack,
   onSave,
   onUpdateDraft,
+  voiceInputEnabled,
+  voiceInputUserId,
 }) {
   const editorScrollRef = useRef(null)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
@@ -98,6 +100,8 @@ function JournalEditor({
           initialBodyMode={initialBodyMode}
           onChange={(body) => onUpdateDraft('body', body)}
           scrollContainerRef={editorScrollRef}
+          voiceInputEnabled={voiceInputEnabled}
+          voiceInputUserId={voiceInputUserId}
         />
       </div>
 
@@ -123,7 +127,7 @@ function JournalMetadata({
   const updatedLabel = updatedAt ? formatDateTime(updatedAt) : 'Not saved yet'
 
   return (
-    <div className="mb-2.5 grid gap-1.5 border-b border-border pb-4 text-sm max-md:mb-1.5 max-md:pb-3">
+    <div className="mb-0 grid gap-1.5 pb-2 text-sm">
       <MetadataRow label="Mood">
         <MoodDropdown
           moodOptions={moodOptions}

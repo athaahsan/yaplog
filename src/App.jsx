@@ -145,6 +145,8 @@ function App() {
         authScopeKey={authScopeKey}
         entries={masterData.journal.entries}
         onEntriesChange={updateJournalEntries}
+        voiceInputEnabled={Boolean(auth.authUser)}
+        voiceInputUserId={auth.authUser?.id || ''}
       />
 
       <input
