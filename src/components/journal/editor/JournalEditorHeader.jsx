@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 
 function JournalEditorHeader({
   favorite,
+  hasUnsavedChanges,
   onBack,
   onSave,
   onToggleFavorite,
@@ -43,7 +44,11 @@ function JournalEditorHeader({
         </Button>
 
         <Button
-          className="h-9 rounded-lg px-3.5 font-semibold"
+          className={cn(
+            'h-9 rounded-lg px-3.5 font-semibold transition-[border-color,box-shadow,background-color,color]',
+            hasUnsavedChanges &&
+              'save-button-unsaved-pulse border border-amber-400/70 shadow-[0_0_22px_rgba(245,158,11,0.32)] hover:border-amber-400',
+          )}
           type="button"
           onClick={onSave}
         >

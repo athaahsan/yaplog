@@ -173,6 +173,43 @@ export async function signOut() {
   }
 }
 
+export async function deleteCurrentAccount(confirmEmail) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  const { data: sessionData, error: sessionError } =
+    await supabase.auth.getSession()
+
+  if (sessionError) {
+    throw sessionError
+  }
+
+  const accessToken = sessionData.session?.access_token
+
+  if (!accessToken) {
+    throw new Error('Sign in again before deleting your account.')
+  }
+
+  const response = await fetch('/api/delete-account', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ confirmEmail }),
+  })
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(payload.error || 'Could not delete your account.')
+  }
+
+  await supabase.auth.signOut().catch(() => {})
+
+  return payload
+}
+
 export async function getCurrentSession() {
   if (!supabase) {
     return null

@@ -22,7 +22,12 @@ function MobileHeader({ sidebarOpen, onOpenSidebar }) {
         >
           <BookOpenText size={18} strokeWidth={2.2} />
         </div>
-        <span className='underline decoration-double'>YapLog</span>
+        <span
+          className="underline decoration-double"
+          style={{ fontFamily: "'Space Mono', monospace" }}
+        >
+          YapLog
+        </span>
       </div>
     </header>
   )

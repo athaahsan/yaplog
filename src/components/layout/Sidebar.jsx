@@ -7,7 +7,6 @@ import {
   Laptop,
   LogIn,
   LogOut,
-  MoreHorizontal,
   Moon,
   NotebookPen,
   Sun,
@@ -225,7 +224,7 @@ function Sidebar({
         ref={userMenuRef}
       >
         <Button
-          className="grid h-auto w-full grid-cols-[36px_1fr_18px] items-center gap-2.5 rounded-lg p-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground aria-expanded:bg-sidebar-accent/70"
+          className="grid h-auto w-full grid-cols-[36px_1fr] items-center gap-2.5 rounded-lg p-2 text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground aria-expanded:bg-sidebar-accent/70"
           variant="ghost"
           type="button"
           aria-haspopup="menu"
@@ -256,11 +255,6 @@ function Sidebar({
               {displaySubtitle}
             </span>
           </span>
-          <MoreHorizontal
-            className="justify-self-end text-muted-foreground"
-            size={17}
-            aria-hidden="true"
-          />
         </Button>
 
         {userMenuOpen && (
@@ -281,7 +275,7 @@ function Sidebar({
                   }}
                 >
                   <UserRound size={16} />
-                  <span>Profile</span>
+                  <span>Account</span>
                 </Button>
 
                 <div className={userMenuDividerClassName} role="separator" />

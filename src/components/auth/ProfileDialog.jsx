@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Pencil, X } from 'lucide-react'
+import { AlertTriangle, Pencil, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -142,7 +142,7 @@ function ProfileAvatar({ avatarUrl, displayName, onSelectFile, saving }) {
   )
 }
 
-function ProfileDialog({ profile, onClose, onSave }) {
+function ProfileDialog({ profile, onClose, onDeleteAccount, onSave }) {
   const [displayName, setDisplayName] = useState(profile.userName || '')
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState(profile.avatarUrl)
   const [avatarBlob, setAvatarBlob] = useState(null)
@@ -154,11 +154,17 @@ function ProfileDialog({ profile, onClose, onSave }) {
   const [isEditingAvatar, setIsEditingAvatar] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const dragStateRef = useRef(null)
   const fileInputRef = useRef(null)
   const cropImageSize = selectedImage
     ? getCropImageSize(selectedImage, zoom)
     : null
+  const normalizedProfileEmail = (profile.userEmail || '').trim().toLowerCase()
+  const deleteConfirmed =
+    deleteConfirmEmail.trim().toLowerCase() === normalizedProfileEmail
 
   useEffect(() => {
     return () => {
@@ -216,6 +222,10 @@ function ProfileDialog({ profile, onClose, onSave }) {
 
   async function handleSubmit(event) {
     event.preventDefault()
+    if (deleting || deleteAccountOpen) {
+      return
+    }
+
     setError('')
     setSaving(true)
 
@@ -230,6 +240,25 @@ function ProfileDialog({ profile, onClose, onSave }) {
       setError(caughtError.message || 'Could not save your profile.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!deleteConfirmed) {
+      setError('Type your account email to confirm deletion.')
+      return
+    }
+
+    setError('')
+    setDeleting(true)
+
+    try {
+      await onDeleteAccount(deleteConfirmEmail.trim())
+      onClose()
+    } catch (caughtError) {
+      setError(caughtError.message || 'Could not delete your account.')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -308,13 +337,31 @@ function ProfileDialog({ profile, onClose, onSave }) {
     }
   }
 
+  function handleClose() {
+    if (!deleting) {
+      onClose()
+    }
+  }
+
+  function openDeleteView() {
+    setDeleteAccountOpen(true)
+    setDeleteConfirmEmail('')
+    setError('')
+  }
+
+  function closeDeleteView() {
+    setDeleteAccountOpen(false)
+    setDeleteConfirmEmail('')
+    setError('')
+  }
+
   return (
     <div
       className="fixed inset-0 z-[80] grid place-items-center bg-black/45 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="profile-dialog-title"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <form
         className="max-h-[calc(100dvh-2rem)] w-full max-w-[420px] overflow-y-auto rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_45%,transparent)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/35 [&::-webkit-scrollbar-track]:bg-transparent"
@@ -326,7 +373,11 @@ function ProfileDialog({ profile, onClose, onSave }) {
             className="min-w-0 flex-1 text-lg font-semibold text-foreground"
             id="profile-dialog-title"
           >
-            {isEditingAvatar ? 'Adjust avatar' : 'Edit profile'}
+            {isEditingAvatar
+              ? 'Adjust avatar'
+              : deleteAccountOpen
+                ? 'Delete account'
+                : 'Account'}
           </h2>
           <Button
             className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
@@ -334,7 +385,8 @@ function ProfileDialog({ profile, onClose, onSave }) {
             size="icon"
             type="button"
             aria-label="Close profile dialog"
-            onClick={onClose}
+            disabled={deleting}
+            onClick={handleClose}
           >
             <X size={16} />
           </Button>
@@ -432,9 +484,78 @@ function ProfileDialog({ profile, onClose, onSave }) {
               </Button>
             </div>
           </>
+        ) : deleteAccountOpen ? (
+          <>
+            <div className="mt-6 rounded-lg border border-destructive/25 bg-destructive/10 p-3">
+              <div className="flex items-start gap-2 text-sm text-destructive">
+                <AlertTriangle className="mt-0.5 size-4 flex-none" />
+                <div className="min-w-0">
+                  <p className="m-0 font-semibold leading-5">
+                    This permanently deletes your account.
+                  </p>
+                  <p className="mt-1 leading-5">
+                    Your synced YapLog data will be removed from the cloud. Type
+                    your email to continue.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <label className="mt-4 grid gap-2 text-sm font-semibold text-foreground">
+              Email
+              <Input
+                value={deleteConfirmEmail}
+                onChange={(event) => setDeleteConfirmEmail(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') {
+                    return
+                  }
+
+                  event.preventDefault()
+
+                  if (deleteConfirmed && !saving && !deleting) {
+                    handleDeleteAccount()
+                  }
+                }}
+                placeholder={profile.userEmail || 'you@example.com'}
+                disabled={saving || deleting}
+              />
+            </label>
+
+            {error && (
+              <p className="mt-3 rounded-lg border border-destructive/25 bg-destructive/10 p-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={deleting}
+                onClick={closeDeleteView}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={!deleteConfirmed || saving || deleting}
+                onClick={handleDeleteAccount}
+              >
+                {deleting ? 'Deleting...' : 'Delete account'}
+              </Button>
+            </div>
+          </>
         ) : (
           <>
-            <div className="mt-6">
+            <div className="mt-6 grid gap-1">
+              <p className="m-0 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+                Profile
+              </p>
+            </div>
+
+            <div className="mt-5">
               <ProfileAvatar
                 avatarUrl={avatarPreviewUrl}
                 displayName={displayName}
@@ -471,16 +592,39 @@ function ProfileDialog({ profile, onClose, onSave }) {
               </p>
             )}
 
+            <div className="mt-6 border-t border-border pt-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="m-0 text-xs font-semibold uppercase tracking-normal text-destructive">
+                    Danger zone
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    Delete your cloud account and synced YapLog data.
+                  </p>
+                </div>
+                <Button
+                  className="shrink-0"
+                  type="button"
+                  variant="destructive"
+                  disabled={saving || deleting}
+                  onClick={openDeleteView}
+                >
+                  <Trash2 size={16} />
+                  <span>Delete</span>
+                </Button>
+              </div>
+            </div>
+
             <div className="mt-6 flex justify-end gap-2">
               <Button
                 type="button"
                 variant="ghost"
-                disabled={saving}
-                onClick={onClose}
+                disabled={saving || deleting}
+                onClick={handleClose}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || deleting}>
                 {saving ? 'Saving...' : 'Save'}
               </Button>
             </div>

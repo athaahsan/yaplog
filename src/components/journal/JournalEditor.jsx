@@ -72,6 +72,7 @@ function JournalEditor({
     <div className="relative flex h-full min-h-0 flex-col">
       <JournalEditorHeader
         favorite={draft.favorite}
+        hasUnsavedChanges={hasUnsavedChanges}
         onBack={requestBack}
         onSave={onSave}
         onToggleFavorite={() => onUpdateDraft('favorite', !draft.favorite)}

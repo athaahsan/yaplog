@@ -6,6 +6,7 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom'
+import { NotebookPen } from 'lucide-react'
 import { moodOptions } from '../../data/journalConfig'
 import {
   downloadMarkdownEntriesZip,
@@ -213,7 +214,12 @@ function JournalTableRoute({ entries, onEntriesChange }) {
           <p className="mb-1.5 text-[13px] font-semibold text-muted-foreground max-[720px]:text-[11px]">
             Workspace
           </p>
-          <h1 className="m-0 text-[30px] font-semibold leading-[1.1] tracking-normal text-foreground max-[720px]:text-[25px]">
+          <h1 className="m-0 flex items-center gap-2 text-[30px] font-semibold leading-[1.1] tracking-normal text-foreground max-[720px]:text-[25px]">
+            <NotebookPen
+              className="size-[0.78em] text-muted-foreground"
+              strokeWidth={2}
+              aria-hidden="true"
+            />
             Journal
           </h1>
         </div>

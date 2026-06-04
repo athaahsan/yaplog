@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { AlertTriangle, Eye, EyeOff, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 const authCopy = {
   signIn: {
     title: 'Sign in',
-    description: 'Use Google or your email to sync YapLog across devices.',
+    description: 'Sync YapLog across devices.',
     action: 'Sign in',
   },
   signUp: {
     title: 'Create account',
-    description: 'Create a YapLog account with Google or email.',
+    description: 'Start syncing YapLog across devices.',
     action: 'Create account',
   },
   forgot: {
@@ -60,7 +61,7 @@ function PasswordField({
   const [visible, setVisible] = useState(false)
 
   return (
-    <label className="grid gap-2 text-sm font-semibold text-foreground">
+    <label className="grid gap-1.5 text-xs font-semibold text-foreground">
       {label}
       <div className="relative">
         <Input
@@ -104,11 +105,19 @@ function AuthDialog({
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const copy = authCopy[mode] || authCopy.signIn
-  const showProviderOptions = mode === 'signIn' || mode === 'signUp'
+  const accountConfirmationSent = mode === 'signUp' && Boolean(message)
+  const showProviderOptions =
+    (mode === 'signIn' || mode === 'signUp') && !accountConfirmationSent
   const needsEmail = mode !== 'reset'
   const needsPassword = mode !== 'forgot'
   const needsConfirmPassword = mode === 'signUp' || mode === 'reset'
   const isBusy = submitting || authLoading
+  const showLegalNotice =
+    (mode === 'signIn' || mode === 'signUp') && !accountConfirmationSent
+  const showAuthForm = !accountConfirmationSent
+  const showFooterLinks =
+    !accountConfirmationSent &&
+    (mode === 'signIn' || mode === 'signUp' || mode === 'forgot' || showLegalNotice)
 
   function switchMode(nextMode) {
     setMode(nextMode)
@@ -239,78 +248,110 @@ function AuthDialog({
           </>
         )}
 
-        <form className="mt-4 grid gap-3" onSubmit={handleSubmit}>
-          {needsEmail && (
-            <label className="grid gap-2 text-sm font-semibold text-foreground">
-              Email
-              <Input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                disabled={isBusy}
-              />
-            </label>
-          )}
-
-          {needsPassword && (
-            <PasswordField
-              label="Password"
-              autoComplete={
-                mode === 'signIn' ? 'current-password' : 'new-password'
-              }
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="At least 8 characters"
-              disabled={isBusy}
-            />
-          )}
-
-          {needsConfirmPassword && (
-            <PasswordField
-              label="Confirm password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder="Type it again"
-              disabled={isBusy}
-            />
-          )}
-
-          {error && (
-            <p className="flex items-start gap-2 rounded-lg border border-destructive/25 bg-destructive/10 p-2 text-sm text-destructive">
-              <AlertTriangle className="mt-0.5 size-4 flex-none" />
-              <span>{error}</span>
+        {accountConfirmationSent ? (
+          <div className="mt-5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3">
+            <p className="m-0 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+              Check your email
             </p>
-          )}
-
-          {message && (
-            <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-2 text-sm text-emerald-700 dark:text-emerald-300">
-              {message}
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              We sent a confirmation link to{' '}
+              <span className="font-medium text-foreground">
+                {email.trim()}
+              </span>
+              .
             </p>
-          )}
-
-          <Button className="mt-1 h-11" type="submit" disabled={isBusy}>
-            {submitting ? 'Working...' : copy.action}
-          </Button>
-        </form>
-
-        <div className="mt-4 grid gap-2 text-center text-sm text-muted-foreground">
-          {mode === 'signIn' && (
-            <>
+            <div className="mt-3 flex justify-end">
               <Button
-                className="mx-auto h-auto w-fit p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                className="h-auto p-0 font-semibold text-foreground underline underline-offset-4 hover:bg-transparent"
                 variant="ghost"
                 type="button"
-                onClick={() => switchMode('forgot')}
+                onClick={() => switchMode('signIn')}
               >
-                Forgot password?
+                Sign in
               </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {showAuthForm && (
+          <form className="mt-4 grid gap-3" onSubmit={handleSubmit}>
+            {needsEmail && (
+              <label className="grid gap-1.5 text-xs font-semibold text-foreground">
+                Email
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  disabled={isBusy}
+                />
+              </label>
+            )}
+
+            {needsPassword && (
+              <div className="grid gap-1">
+                <PasswordField
+                  label="Password"
+                  autoComplete={
+                    mode === 'signIn' ? 'current-password' : 'new-password'
+                  }
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="At least 8 characters"
+                  disabled={isBusy}
+                />
+                {mode === 'signIn' && (
+                  <button
+                    className="ml-auto w-fit border-0 bg-transparent p-0 text-[10px] font-medium leading-none text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                    style={{ fontSize: 12, lineHeight: 1.15 }}
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => switchMode('forgot')}
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
+            )}
+
+            {needsConfirmPassword && (
+              <PasswordField
+                label="Confirm password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Type it again"
+                disabled={isBusy}
+              />
+            )}
+
+            {error && (
+              <p className="flex items-start gap-2 rounded-lg border border-destructive/25 bg-destructive/10 p-2 text-sm text-destructive">
+                <AlertTriangle className="mt-0.5 size-4 flex-none" />
+                <span>{error}</span>
+              </p>
+            )}
+
+            {message && (
+              <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-2 text-sm text-emerald-700 dark:text-emerald-300">
+                {message}
+              </p>
+            )}
+
+            <Button className="mt-1 h-10 text-sm" type="submit" disabled={isBusy}>
+              {submitting ? 'Working...' : copy.action}
+            </Button>
+          </form>
+        )}
+
+        {showFooterLinks && (
+          <div className="mt-4 grid gap-2 text-center text-sm text-muted-foreground">
+            {mode === 'signIn' && (
               <div className="flex items-center justify-center gap-1.5">
                 <span>New here?</span>
                 <Button
-                  className="h-auto p-0 font-semibold text-foreground hover:bg-transparent"
+                  className="h-auto p-0 font-semibold text-foreground hover:bg-transparent hover:text-foreground"
                   variant="ghost"
                   type="button"
                   onClick={() => switchMode('signUp')}
@@ -318,37 +359,59 @@ function AuthDialog({
                   Create account
                 </Button>
               </div>
-            </>
-          )}
+            )}
 
-          {mode === 'signUp' && (
-            <div className="flex items-center justify-center gap-1.5">
-              <span>Already have an account?</span>
-              <Button
-                className="h-auto p-0 font-semibold text-foreground hover:bg-transparent"
-                variant="ghost"
-                type="button"
-                onClick={() => switchMode('signIn')}
-              >
-                Sign in
-              </Button>
-            </div>
-          )}
+            {mode === 'signUp' && (
+              <div className="flex items-center justify-center gap-1.5">
+                <span>Already have an account?</span>
+                <Button
+                  className="h-auto p-0 font-semibold text-foreground hover:bg-transparent hover:text-foreground"
+                  variant="ghost"
+                  type="button"
+                  onClick={() => switchMode('signIn')}
+                >
+                  Sign in
+                </Button>
+              </div>
+            )}
 
-          {mode === 'forgot' && (
-            <div className="flex items-center justify-center gap-1.5">
-              <span>Remembered it?</span>
-              <Button
-                className="h-auto p-0 font-semibold text-foreground hover:bg-transparent"
-                variant="ghost"
-                type="button"
-                onClick={() => switchMode('signIn')}
-              >
-                Sign in
-              </Button>
-            </div>
-          )}
-        </div>
+            {mode === 'forgot' && (
+              <div className="flex items-center justify-center gap-1.5">
+                <span>Remembered it?</span>
+                <Button
+                  className="h-auto p-0 font-semibold text-foreground hover:bg-transparent hover:text-foreground"
+                  variant="ghost"
+                  type="button"
+                  onClick={() => switchMode('signIn')}
+                >
+                  Sign in
+                </Button>
+              </div>
+            )}
+
+            {showLegalNotice && (
+              <p className="mx-auto max-w-[300px] text-xs leading-5 text-muted-foreground">
+                By continuing, you agree to YapLog&apos;s{' '}
+                <Link
+                  className="font-medium text-foreground hover:text-foreground"
+                  to="/terms"
+                  onClick={onClose}
+                >
+                  Terms
+                </Link>{' '}
+                and{' '}
+                <Link
+                  className="font-medium text-foreground hover:text-foreground"
+                  to="/privacy"
+                  onClick={onClose}
+                >
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

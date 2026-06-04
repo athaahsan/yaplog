@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import AuthDialog from './components/auth/AuthDialog'
 import ProfileDialog from './components/auth/ProfileDialog'
 import AppRoutes from './components/AppRoutes'
+import LegalPage from './components/legal/LegalPage'
 import {
   appRouteMap,
   getActiveAppFromPath,
@@ -47,6 +48,12 @@ function App() {
   const font = masterData.settings.font
   const theme = masterData.settings.theme
   const activeApp = getActiveAppFromPath(location.pathname)
+  const legalPageType =
+    location.pathname === '/privacy'
+      ? 'privacy'
+      : location.pathname === '/terms'
+        ? 'terms'
+        : ''
 
   const handlePasswordRecovery = useCallback(() => {
     setSignInDialogOpen(true)
@@ -71,6 +78,10 @@ function App() {
   })
 
   useEffect(() => {
+    if (legalPageType) {
+      return
+    }
+
     if (auth.authLoading) {
       return
     }
@@ -87,7 +98,7 @@ function App() {
 
     previousAuthScopeRef.current = authScopeKey
     navigate('/journal', { replace: true })
-  }, [auth.authLoading, authScopeKey, navigate])
+  }, [auth.authLoading, authScopeKey, legalPageType, navigate])
 
   useEffect(() => {
     const legacyEntryId = new URLSearchParams(location.search).get('journalEntry')
@@ -113,6 +124,10 @@ function App() {
   function selectApp(app) {
     navigate(appRouteMap[app] || '/journal')
     setSidebarOpen(false)
+  }
+
+  if (legalPageType) {
+    return <LegalPage type={legalPageType} />
   }
 
   return (
@@ -198,6 +213,7 @@ function App() {
       {profileDialogOpen && auth.authProfile && (
         <ProfileDialog
           profile={auth.authProfile}
+          onDeleteAccount={auth.deleteAccount}
           onClose={() => setProfileDialogOpen(false)}
           onSave={auth.saveProfile}
         />

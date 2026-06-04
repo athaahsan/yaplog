@@ -12,9 +12,9 @@ import { cn } from '@/lib/utils'
 import { formatDateTime } from '../../lib/dateTime'
 
 const sortableColumns = {
-  createdAt: { icon: Calendar, label: 'Created time' },
+  createdAt: { icon: Calendar, label: 'Created' },
   title: { icon: AlignLeft, label: 'Entry' },
-  updatedAt: { icon: Calendar, label: 'Last edited time' },
+  updatedAt: { icon: Calendar, label: 'Updated' },
 }
 
 const checkboxClassName =
@@ -25,6 +25,10 @@ const headerCellClassName =
 
 const bodyCellClassName =
   'h-[64px] whitespace-nowrap border-b border-border px-3.5 align-middle'
+const stickyCheckboxHeaderClassName =
+  'sticky left-0 z-30 bg-background/95 backdrop-blur-md backdrop-saturate-150'
+const stickyCheckboxBodyClassName =
+  'sticky left-0 z-10 bg-background group-hover:bg-accent group-focus-visible:bg-accent'
 
 function formatTableDateTime(value) {
   const formatted = formatDateTime(value)
@@ -168,6 +172,7 @@ function JournalTable({
             <th
               className={cn(
                 headerCellClassName,
+                stickyCheckboxHeaderClassName,
                 'w-11 cursor-pointer',
               )}
               onClick={onToggleSelectAll}
@@ -225,6 +230,7 @@ function JournalTable({
                 <td
                   className={cn(
                     bodyCellClassName,
+                    stickyCheckboxBodyClassName,
                     'w-11 cursor-pointer',
                   )}
                   onClick={(event) => {

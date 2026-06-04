@@ -140,3 +140,24 @@
 .journal-table tbody tr:last-child > td {
   border-bottom: 0;
 }
+
+@keyframes save-button-unsaved-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(245 158 11 / 0.36);
+    transform: scale(1);
+  }
+
+  48% {
+    box-shadow: 0 0 0 5px rgb(245 158 11 / 0.16);
+    transform: scale(1.025);
+  }
+
+  100% {
+    box-shadow: 0 0 22px rgb(245 158 11 / 0.32);
+    transform: scale(1);
+  }
+}
+
+.save-button-unsaved-pulse {
+  animation: save-button-unsaved-pulse 520ms ease-out;
+}

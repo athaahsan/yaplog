@@ -11,6 +11,7 @@ import {
   getCurrentSession,
   getUserProfile,
   onAuthStateChange,
+  deleteCurrentAccount,
   sendPasswordReset,
   signInWithGoogle,
   signInWithPassword,
@@ -222,12 +223,32 @@ export function useAuthSession({
     }
   }
 
+  async function deleteAccount(confirmEmail) {
+    if (!authUser) {
+      return
+    }
+
+    setAuthError('')
+
+    try {
+      await deleteCurrentAccount(confirmEmail)
+      setAuthUser(null)
+      setSavedAuthProfile(null)
+      setCloudReady(false)
+      setMasterData(loadMasterData())
+    } catch (error) {
+      setAuthError(error.message || 'Could not delete your account.')
+      throw error
+    }
+  }
+
   return {
     authError,
     authLoading,
     authProfile,
     authUser,
     cloudReady,
+    deleteAccount,
     resetPassword,
     saveProfile,
     setAuthError,
