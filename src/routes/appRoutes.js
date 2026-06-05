@@ -2,7 +2,7 @@ export const appRouteMap = {
   Journal: '/journal',
   Calendar: '/calendar',
   Tasks: '/tasks',
-  Memos: '/memos',
+  Notes: '/notes',
 }
 
 export function getActiveAppFromPath(pathname) {
@@ -14,8 +14,8 @@ export function getActiveAppFromPath(pathname) {
     return 'Tasks'
   }
 
-  if (pathname.startsWith('/memos')) {
-    return 'Memos'
+  if (pathname.startsWith('/notes') || pathname.startsWith('/memos')) {
+    return 'Notes'
   }
 
   return 'Journal'

@@ -165,7 +165,7 @@ function JournalTable({
   }
 
   return (
-    <div className="relative max-h-[calc(100dvh-174px)] overflow-auto rounded-lg border border-border bg-background [contain:layout_paint] [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_55%,transparent)_transparent] [scrollbar-width:thin] max-[720px]:max-h-[calc(100dvh-216px)] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-track]:bg-transparent">
+    <div className="relative max-h-[calc(100dvh-174px)] overflow-auto bg-background [contain:layout_paint] [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_55%,transparent)_transparent] [scrollbar-width:thin] max-[720px]:max-h-[calc(100dvh-216px)] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-track]:bg-transparent">
       <table className="journal-table w-full min-w-[760px] border-collapse text-sm text-foreground">
         <thead>
           <tr>

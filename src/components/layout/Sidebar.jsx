@@ -22,7 +22,7 @@ const appLinks = [
   { label: 'Journal', icon: NotebookPen },
   { label: 'Calendar', icon: CalendarDays },
   { label: 'Tasks', icon: CheckSquare },
-  { label: 'Memos', icon: FileText },
+  { label: 'Notes', icon: FileText },
 ]
 
 const themeOptions = [

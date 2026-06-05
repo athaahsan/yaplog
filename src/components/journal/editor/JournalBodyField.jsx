@@ -7,7 +7,6 @@ import {
   RotateCcw,
   Square,
   Upload,
-  Volume2,
   X,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -834,8 +833,6 @@ function AudioPreview({ audioName, audioUrl }) {
             onChange={handleSeek}
           />
         </div>
-
-        <Volume2 className="size-4 text-muted-foreground" />
       </div>
     </div>
   )

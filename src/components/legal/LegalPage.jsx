@@ -13,7 +13,7 @@ const legalPages = {
         heading: 'Information YapLog Handles',
         paragraphs: [
           'YapLog may store account details such as your email address, display name, avatar, and authentication profile when you sign in.',
-          'YapLog stores the content you create in the app, including journal entries, mood and favorite metadata, tasks, memos, calendar-related data, imported data, and app settings.',
+          'YapLog stores the content you create in the app, including journal entries, mood and favorite metadata, tasks, notes, calendar-related data, imported data, and app settings.',
           'If you use YapLog as a guest, your data is stored locally in your browser on that device. If you sign in, your data may be synced through the cloud.',
         ],
       },
@@ -95,7 +95,7 @@ const legalPages = {
       {
         heading: 'Your Content',
         paragraphs: [
-          'You keep ownership of the journal entries, tasks, memos, audio, transcripts, and other content you create in YapLog.',
+          'You keep ownership of the journal entries, tasks, notes, audio, transcripts, and other content you create in YapLog.',
           'You give YapLog permission to store, process, transmit, and display your content only as needed to provide the app features you use, including sync, AI polishing, title generation, transcription, import, and export.',
         ],
       },

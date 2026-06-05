@@ -64,9 +64,10 @@ function AppRoutes({
         element={<PlaceholderWorkspace activeApp="Tasks" />}
       />
       <Route
-        path="/memos"
-        element={<PlaceholderWorkspace activeApp="Memos" />}
+        path="/notes"
+        element={<PlaceholderWorkspace activeApp="Notes" />}
       />
+      <Route path="/memos" element={<Navigate to="/notes" replace />} />
       <Route path="*" element={<Navigate to="/journal" replace />} />
     </Routes>
   )
