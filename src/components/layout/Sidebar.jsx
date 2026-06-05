@@ -104,9 +104,6 @@ function Sidebar({
         >
           YapLog
         </span>
-        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
-          {APP_VERSION}
-        </span>
         <Button
           className="hidden size-9 rounded-lg text-foreground max-[720px]:grid"
           variant="ghost"
@@ -218,6 +215,13 @@ function Sidebar({
           </div>
         </section>
       </nav>
+
+      <div
+        className="px-5 pb-3 text-[11px] font-semibold leading-none text-muted-foreground"
+        style={{ fontFamily: "'Space Mono', monospace" }}
+      >
+        Version {APP_VERSION.replace(/^v/i, '')}
+      </div>
 
       <footer
         className="relative border-t border-sidebar-border p-3"
