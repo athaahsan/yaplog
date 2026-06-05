@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AuthDialog from './components/auth/AuthDialog'
 import ProfileDialog from './components/auth/ProfileDialog'
@@ -130,6 +130,10 @@ function App() {
     return <LegalPage type={legalPageType} />
   }
 
+  if (auth.authLoading) {
+    return <AppLoadingScreen />
+  }
+
   return (
     <AppShell
       activeApp={activeApp}
@@ -219,6 +223,33 @@ function App() {
         />
       )}
     </AppShell>
+  )
+}
+
+function AppLoadingScreen() {
+  return (
+    <main className="relative grid min-h-dvh place-items-center overflow-hidden bg-background p-6 text-foreground">
+      <div
+        className="absolute inset-0 bg-popover/35 backdrop-blur-md"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--foreground)_8%,transparent),transparent_42%)]"
+        aria-hidden="true"
+      />
+      <div className="relative z-10 grid place-items-center gap-5 text-popover-foreground">
+        <div
+          className="text-2xl font-bold underline decoration-double underline-offset-4"
+          style={{ fontFamily: "'Space Mono', monospace" }}
+        >
+          YapLog
+        </div>
+        <Loader2
+          className="size-5 animate-spin text-muted-foreground"
+          aria-label="Loading YapLog"
+        />
+      </div>
+    </main>
   )
 }
 

@@ -209,7 +209,7 @@ function JournalTableRoute({ entries, onEntriesChange }) {
 
   return (
     <div className="min-w-0">
-      <header className="mb-[18px] flex items-end justify-between max-[720px]:mb-3.5">
+      <header className="mb-6 flex items-end justify-between max-[720px]:mb-[18px]">
         <div>
           <p className="mb-1.5 text-[13px] font-semibold text-muted-foreground max-[720px]:text-[11px]">
             Workspace
