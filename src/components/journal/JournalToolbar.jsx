@@ -29,7 +29,7 @@ function JournalToolbar({
 }) {
   if (selectedCount > 0) {
     return (
-      <div className="relative mb-3 grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 sm:flex">
+      <div className="relative mb-3 grid flex-none grid-cols-[1fr_auto_auto_auto] items-center gap-2 sm:flex">
         <div className="flex h-9 items-center text-sm font-semibold text-foreground">
           <span>{selectedCount} selected</span>
         </div>
@@ -71,7 +71,7 @@ function JournalToolbar({
   }
 
   return (
-    <div className="relative mb-3 grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:flex">
+    <div className="relative mb-3 grid flex-none grid-cols-[auto_1fr_auto] items-center gap-2 sm:flex">
       <div className="relative" ref={filterRef}>
         <Button
           variant="outline"

@@ -61,7 +61,7 @@ function FilterPopover({
                 className={cn(
                   'size-[34px] rounded-lg border border-border bg-transparent text-lg hover:bg-accent',
                   active &&
-                    'border-primary/70 bg-primary/10 shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary)_42%,transparent)]',
+                    'border-muted-foreground/60 bg-muted/35',
                 )}
                 type="button"
                 aria-pressed={active}
@@ -153,7 +153,7 @@ function FavoriteFilterButton({ active, label, onClick, variant = 'filled' }) {
       className={cn(
         'size-[34px] rounded-lg border border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
         active &&
-          'border-primary/70 bg-primary/10 text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary)_42%,transparent)]',
+          'border-muted-foreground/60 bg-muted/35 text-foreground',
       )}
       type="button"
       aria-label={label}
@@ -222,14 +222,14 @@ function formatDateRange(range) {
   }
 
   if (range.from && range.to) {
-    return `${format(range.from, 'MMM d, yyyy')} - ${format(range.to, 'MMM d, yyyy')}`
+    return `${format(range.from, 'MMM d')} - ${format(range.to, 'MMM d')}`
   }
 
   if (range.from) {
-    return `From ${format(range.from, 'MMM d, yyyy')}`
+    return `From ${format(range.from, 'MMM d')}`
   }
 
-  return `Until ${format(range.to, 'MMM d, yyyy')}`
+  return `Until ${format(range.to, 'MMM d')}`
 }
 
 export default FilterPopover

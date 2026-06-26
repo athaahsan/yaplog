@@ -14,4 +14,7 @@ export default defineConfig({
       '@': path.resolve(dirname, './src'),
     },
   },
+  server: {
+    allowedHosts: ['laptop-msi'],
+  },
 })

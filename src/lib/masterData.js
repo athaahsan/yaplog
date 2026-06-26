@@ -7,6 +7,7 @@ const LEGACY_FONT_KEY = 'yaplog-font'
 
 const validThemes = new Set(['light', 'dark', 'system'])
 const validFonts = new Set(['default', 'serif', 'mono'])
+const validTaskPriorities = new Set(['none', 'low', 'medium', 'high'])
 const validMoods = new Set(['😊', '😐', '😔', '🫩', '😰', '😡'])
 const defaultMood = '😐'
 
@@ -92,10 +93,10 @@ export function normalizeMasterData(value, options = {}) {
       entries: normalizeEntries(sourceJournal.entries),
     },
     tasks: {
-      items: Array.isArray(sourceTasks.items) ? sourceTasks.items : [],
+      items: normalizeTaskItems(sourceTasks.items),
     },
     memos: {
-      items: Array.isArray(sourceMemos.items) ? sourceMemos.items : [],
+      items: normalizeMemoItems(sourceMemos.items),
     },
   }
 }
@@ -133,6 +134,8 @@ export function mergeMasterData(currentMasterData, importedMasterData) {
   const current = normalizeMasterData(currentMasterData)
   const imported = normalizeMasterData(importedMasterData)
   const existingIds = new Set(current.journal.entries.map((entry) => entry.id))
+  const existingTaskIds = new Set(current.tasks.items.map((item) => item.id))
+  const existingMemoIds = new Set(current.memos.items.map((item) => item.id))
 
   const importedEntries = imported.journal.entries.map((entry) => {
     if (!existingIds.has(entry.id)) {
@@ -145,11 +148,39 @@ export function mergeMasterData(currentMasterData, importedMasterData) {
     return nextEntry
   })
 
+  const importedTaskItems = imported.tasks.items.map((item) => {
+    if (!existingTaskIds.has(item.id)) {
+      existingTaskIds.add(item.id)
+      return item
+    }
+
+    const nextItem = { ...item, id: createId('task') }
+    existingTaskIds.add(nextItem.id)
+    return nextItem
+  })
+
+  const importedMemoItems = imported.memos.items.map((item) => {
+    if (!existingMemoIds.has(item.id)) {
+      existingMemoIds.add(item.id)
+      return item
+    }
+
+    const nextItem = { ...item, id: createId('memo') }
+    existingMemoIds.add(nextItem.id)
+    return nextItem
+  })
+
   return {
     ...current,
     updatedAt: nowIso(),
     journal: {
       entries: [...current.journal.entries, ...importedEntries],
+    },
+    tasks: {
+      items: [...current.tasks.items, ...importedTaskItems],
+    },
+    memos: {
+      items: [...current.memos.items, ...importedMemoItems],
     },
   }
 }
@@ -200,6 +231,126 @@ function normalizeEntries(entries) {
           typeof entry.updatedAt === 'string' && entry.updatedAt
             ? entry.updatedAt
             : entry.createdAt || now,
+      }
+    })
+}
+
+function normalizeTaskItems(items) {
+  if (!Array.isArray(items)) {
+    return []
+  }
+
+  const usedIds = new Set()
+
+  return items
+    .filter(isObject)
+    .map((item) => {
+      const now = nowIso()
+      const id =
+        typeof item.id === 'string' && item.id.trim()
+          ? item.id.trim()
+          : createId('task')
+      const uniqueId = usedIds.has(id) ? createId('task') : id
+
+      usedIds.add(uniqueId)
+
+      return {
+        id: uniqueId,
+        title: typeof item.title === 'string' ? item.title.slice(0, 220) : '',
+        notes: typeof item.notes === 'string' ? item.notes.slice(0, 6000) : '',
+        completed: Boolean(item.completed),
+        dueDate:
+          typeof item.dueDate === 'string' && item.dueDate
+            ? item.dueDate.slice(0, 10)
+            : '',
+        priority: validTaskPriorities.has(item.priority)
+          ? item.priority
+          : 'none',
+        subtasks: normalizeSubtaskItems(item.subtasks),
+        createdAt:
+          typeof item.createdAt === 'string' && item.createdAt
+            ? item.createdAt
+            : now,
+        updatedAt:
+          typeof item.updatedAt === 'string' && item.updatedAt
+            ? item.updatedAt
+            : item.createdAt || now,
+      }
+    })
+}
+
+function normalizeSubtaskItems(items) {
+  if (!Array.isArray(items)) {
+    return []
+  }
+
+  const usedIds = new Set()
+
+  return items
+    .filter(isObject)
+    .map((item) => {
+      const now = nowIso()
+      const id =
+        typeof item.id === 'string' && item.id.trim()
+          ? item.id.trim()
+          : createId('subtask')
+      const uniqueId = usedIds.has(id) ? createId('subtask') : id
+
+      usedIds.add(uniqueId)
+
+      return {
+        id: uniqueId,
+        title: typeof item.title === 'string' ? item.title.slice(0, 220) : '',
+        notes: typeof item.notes === 'string' ? item.notes.slice(0, 6000) : '',
+        completed: Boolean(item.completed),
+        dueDate:
+          typeof item.dueDate === 'string' && item.dueDate
+            ? item.dueDate.slice(0, 10)
+            : '',
+        createdAt:
+          typeof item.createdAt === 'string' && item.createdAt
+            ? item.createdAt
+            : now,
+        updatedAt:
+          typeof item.updatedAt === 'string' && item.updatedAt
+            ? item.updatedAt
+            : item.createdAt || now,
+      }
+    })
+}
+
+function normalizeMemoItems(items) {
+  if (!Array.isArray(items)) {
+    return []
+  }
+
+  const usedIds = new Set()
+
+  return items
+    .filter(isObject)
+    .map((item) => {
+      const now = nowIso()
+      const id =
+        typeof item.id === 'string' && item.id.trim()
+          ? item.id.trim()
+          : createId('memo')
+      const uniqueId = usedIds.has(id) ? createId('memo') : id
+
+      usedIds.add(uniqueId)
+
+      return {
+        id: uniqueId,
+        title: typeof item.title === 'string' ? item.title.slice(0, 180) : '',
+        body: typeof item.body === 'string' ? item.body.slice(0, 12000) : '',
+        favorite: Boolean(item.favorite),
+        createdAt:
+          typeof item.createdAt === 'string' && item.createdAt
+            ? item.createdAt
+            : now,
+        updatedAt:
+          typeof item.updatedAt === 'string' && item.updatedAt
+            ? item.updatedAt
+            : item.createdAt || now,
       }
     })
 }

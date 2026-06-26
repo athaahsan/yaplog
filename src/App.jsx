@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AuthDialog from './components/auth/AuthDialog'
 import ProfileDialog from './components/auth/ProfileDialog'
 import AppRoutes from './components/AppRoutes'
+import HomePage from './components/home/HomePage'
 import LegalPage from './components/legal/LegalPage'
+import SettingsDialog from './components/settings/SettingsDialog'
 import {
   appRouteMap,
   getActiveAppFromPath,
+  getBreadcrumbItems,
   getJournalEntryRoute,
 } from './routes/appRoutes'
 import AppShell from './components/AppShell'
@@ -26,6 +29,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [signInDialogOpen, setSignInDialogOpen] = useState(false)
   const [profileDialogOpen, setProfileDialogOpen] = useState(false)
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   const [authDialogMode, setAuthDialogMode] = useState('signIn')
   const authScopeReadyRef = useRef(false)
   const previousAuthScopeRef = useRef('guest')
@@ -43,11 +47,14 @@ function App() {
     setImportError,
     setMasterData,
     updateJournalEntries,
+    updateMemoItems,
     updateSetting,
+    updateTaskItems,
   } = useMasterData()
   const font = masterData.settings.font
   const theme = masterData.settings.theme
   const activeApp = getActiveAppFromPath(location.pathname)
+  const breadcrumbs = getBreadcrumbItems(location.pathname, masterData)
   const legalPageType =
     location.pathname === '/privacy'
       ? 'privacy'
@@ -97,7 +104,7 @@ function App() {
     }
 
     previousAuthScopeRef.current = authScopeKey
-    navigate('/journal', { replace: true })
+    navigate('/dashboard', { replace: true })
   }, [auth.authLoading, authScopeKey, legalPageType, navigate])
 
   useEffect(() => {
@@ -134,36 +141,109 @@ function App() {
     return <AppLoadingScreen />
   }
 
+  const authErrorToast = auth.authError && (
+    <ToastAlert
+      align="left"
+      message={auth.authError}
+      onDismiss={() => auth.setAuthError('')}
+    />
+  )
+  const signInDialog = signInDialogOpen && (
+    <AuthDialog
+      authLoading={auth.authLoading}
+      initialMode={authDialogMode}
+      key={authDialogMode}
+      onClose={() => setSignInDialogOpen(false)}
+      onForgotPassword={auth.resetPassword}
+      onGoogleSignIn={auth.signIn}
+      onPasswordSignIn={auth.signInWithEmail}
+      onPasswordSignUp={auth.signUpWithEmail}
+      onPasswordUpdate={auth.setNewPassword}
+    />
+  )
+  const profileDialog = profileDialogOpen && auth.authProfile && (
+    <ProfileDialog
+      profile={auth.authProfile}
+      onDeleteAccount={auth.deleteAccount}
+      onClose={() => setProfileDialogOpen(false)}
+      onSave={auth.saveProfile}
+    />
+  )
+  const settingsDialog = settingsDialogOpen && (
+    <SettingsDialog
+      font={font}
+      theme={theme}
+      onClose={() => setSettingsDialogOpen(false)}
+      onExportData={() => {
+        exportData()
+        setSettingsDialogOpen(false)
+      }}
+      onFontChange={(value) => updateSetting('font', value)}
+      onImportData={() => {
+        openImportPicker()
+        setSettingsDialogOpen(false)
+      }}
+      onThemeChange={(value) => updateSetting('theme', value)}
+    />
+  )
+
+  if (location.pathname === '/') {
+    if (auth.authUser) {
+      return <Navigate to="/dashboard" replace />
+    }
+
+    return (
+      <>
+        <HomePage
+          entriesCount={masterData.journal.entries.length}
+          signedIn={Boolean(auth.authUser)}
+          onOpenJournal={() => navigate('/journal')}
+          onSignIn={() => {
+            setAuthDialogMode('signIn')
+            setSignInDialogOpen(true)
+          }}
+          onStartWriting={() => navigate('/journal/new')}
+        />
+        {authErrorToast}
+        {signInDialog}
+        {settingsDialog}
+      </>
+    )
+  }
+
   return (
     <AppShell
       activeApp={activeApp}
       authLoading={auth.authLoading}
       authProfile={auth.authProfile}
-      font={font}
+      breadcrumbs={breadcrumbs}
       onCloseSidebar={() => setSidebarOpen(false)}
-      onExportData={exportData}
-      onFontChange={(value) => updateSetting('font', value)}
-      onImportData={openImportPicker}
       onOpenSidebar={() => setSidebarOpen(true)}
       onProfile={() => {
         setSidebarOpen(false)
         setProfileDialogOpen(true)
       }}
       onSelectApp={selectApp}
+      onSettings={() => {
+        setSidebarOpen(false)
+        setSettingsDialogOpen(true)
+      }}
       onSignIn={() => {
         setSidebarOpen(false)
         setAuthDialogMode('signIn')
         setSignInDialogOpen(true)
       }}
       onSignOut={auth.signOutUser}
-      onThemeChange={(value) => updateSetting('theme', value)}
       sidebarOpen={sidebarOpen}
-      theme={theme}
     >
       <AppRoutes
         authScopeKey={authScopeKey}
         entries={masterData.journal.entries}
+        memoItems={masterData.memos.items}
         onEntriesChange={updateJournalEntries}
+        onMemoItemsChange={updateMemoItems}
+        onTaskItemsChange={updateTaskItems}
+        taskItems={masterData.tasks.items}
         voiceInputEnabled={Boolean(auth.authUser)}
         voiceInputUserId={auth.authUser?.id || ''}
       />
@@ -184,13 +264,7 @@ function App() {
         />
       )}
 
-      {auth.authError && (
-        <ToastAlert
-          align="left"
-          message={auth.authError}
-          onDismiss={() => auth.setAuthError('')}
-        />
-      )}
+      {authErrorToast}
 
       {pendingImport && (
         <ImportDialog
@@ -200,28 +274,11 @@ function App() {
         />
       )}
 
-      {signInDialogOpen && (
-        <AuthDialog
-          authLoading={auth.authLoading}
-          initialMode={authDialogMode}
-          key={authDialogMode}
-          onClose={() => setSignInDialogOpen(false)}
-          onForgotPassword={auth.resetPassword}
-          onGoogleSignIn={auth.signIn}
-          onPasswordSignIn={auth.signInWithEmail}
-          onPasswordSignUp={auth.signUpWithEmail}
-          onPasswordUpdate={auth.setNewPassword}
-        />
-      )}
+      {signInDialog}
 
-      {profileDialogOpen && auth.authProfile && (
-        <ProfileDialog
-          profile={auth.authProfile}
-          onDeleteAccount={auth.deleteAccount}
-          onClose={() => setProfileDialogOpen(false)}
-          onSave={auth.saveProfile}
-        />
-      )}
+      {profileDialog}
+
+      {settingsDialog}
     </AppShell>
   )
 }

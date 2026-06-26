@@ -6,7 +6,6 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom'
-import { NotebookPen } from 'lucide-react'
 import { moodOptions } from '../../data/journalConfig'
 import {
   downloadMarkdownEntriesZip,
@@ -76,6 +75,8 @@ function JournalTableRoute({ entries, onEntriesChange }) {
     (hasDateRange(createdDateRange) ? 1 : 0) +
     (hasDateRange(updatedDateRange) ? 1 : 0)
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
+  const hasActiveQueryOrFilter =
+    Boolean(normalizedSearchQuery) || activeFilterCount > 0
   const filteredEntries = entries
     .filter((entry) => {
       const matchesSearch =
@@ -119,6 +120,11 @@ function JournalTableRoute({ entries, onEntriesChange }) {
   const allEntriesSelected =
     filteredEntries.length > 0 &&
     filteredEntries.every((entry) => selectedEntryIds.includes(entry.id))
+  const entryStateLabel = getEntryStateLabel({
+    filteredCount: filteredEntries.length,
+    hasActiveQueryOrFilter,
+    totalCount: entries.length,
+  })
 
   useEffect(() => {
     function handleOutsideClick(event) {
@@ -208,21 +214,14 @@ function JournalTableRoute({ entries, onEntriesChange }) {
   }
 
   return (
-    <div className="min-w-0">
-      <header className="mb-6 flex items-end justify-between max-[720px]:mb-[18px]">
-        <div>
-          <p className="mb-1.5 text-[13px] font-semibold text-muted-foreground max-[720px]:text-[11px]">
-            Workspace
-          </p>
-          <h1 className="m-0 flex items-center gap-2 text-[30px] font-semibold leading-[1.1] tracking-normal text-foreground max-[720px]:text-[25px]">
-            <NotebookPen
-              className="size-[0.78em] text-muted-foreground"
-              strokeWidth={2}
-              aria-hidden="true"
-            />
-            Journal
-          </h1>
-        </div>
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col">
+      <header className="mb-5 flex flex-none items-baseline justify-between gap-4 max-[720px]:mb-4">
+        <h1 className="m-0 min-w-0 text-[30px] font-semibold leading-[1.1] tracking-normal text-foreground max-[720px]:text-[25px]">
+          Journal
+        </h1>
+        <p className="m-0 shrink-0 text-sm font-semibold text-muted-foreground">
+          {entryStateLabel}
+        </p>
       </header>
 
       <JournalToolbar
@@ -249,20 +248,34 @@ function JournalTableRoute({ entries, onEntriesChange }) {
         updatedDateRange={updatedDateRange}
       />
 
-      <JournalTable
-        allEntriesSelected={allEntriesSelected}
-        entries={filteredEntries}
-        onOpenEntry={openEntry}
-        onToggleEntrySelection={toggleEntrySelection}
-        onToggleFavorite={toggleFavorite}
-        onToggleSelectAll={toggleSelectAll}
-        onUpdateSort={updateSort}
-        selectedEntryIds={selectedEntryIds}
-        sortConfig={sortConfig}
-        searchQuery={searchQuery}
-      />
+      <div className="min-h-0 flex-1">
+        <JournalTable
+          allEntriesSelected={allEntriesSelected}
+          entries={filteredEntries}
+          onOpenEntry={openEntry}
+          onToggleEntrySelection={toggleEntrySelection}
+          onToggleFavorite={toggleFavorite}
+          onToggleSelectAll={toggleSelectAll}
+          onUpdateSort={updateSort}
+          selectedEntryIds={selectedEntryIds}
+          sortConfig={sortConfig}
+          searchQuery={searchQuery}
+        />
+      </div>
     </div>
   )
+}
+
+function getEntryStateLabel({
+  filteredCount,
+  hasActiveQueryOrFilter,
+  totalCount,
+}) {
+  if (hasActiveQueryOrFilter) {
+    return filteredCount === 1 ? '1 result' : `${filteredCount} results`
+  }
+
+  return totalCount === 1 ? '1 entry' : `${totalCount} entries`
 }
 
 function JournalEditorRoute({

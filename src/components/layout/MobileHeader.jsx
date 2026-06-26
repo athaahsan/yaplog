@@ -1,9 +1,12 @@
-import { BookOpenText, PanelLeft } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { PanelLeftOpen } from 'lucide-react'
+import { PanelLeft } from 'lucide-react'
 
-function MobileHeader({ sidebarOpen, onOpenSidebar }) {
+import { Button } from '@/components/ui/button'
+import BreadcrumbNav from './BreadcrumbNav'
+
+function MobileHeader({ breadcrumbs, sidebarOpen, onOpenSidebar }) {
   return (
-    <header className="sticky top-0 z-30 hidden min-h-14 items-center gap-2.5 overflow-hidden border-b border-sidebar-border bg-background px-3.5 max-[720px]:flex">
+    <header className="sticky top-0 z-30 hidden min-h-14 items-center gap-2 overflow-hidden border-b border-sidebar-border bg-background px-3.5 max-[720px]:flex">
       <Button
         className="size-9 rounded-lg text-foreground"
         variant="ghost"
@@ -13,22 +16,13 @@ function MobileHeader({ sidebarOpen, onOpenSidebar }) {
         aria-expanded={sidebarOpen}
         onClick={onOpenSidebar}
       >
-        <PanelLeft size={20} />
+        <PanelLeft className="size-4.5" />
       </Button>
-      <div className="flex items-center text-base font-semibold">
-        <div
-          className="grid size-[34px] place-items-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground max-[720px]:hidden"
-          aria-hidden="true"
-        >
-          <BookOpenText size={18} strokeWidth={2.2} />
-        </div>
-        <span
-          className="underline decoration-double"
-          style={{ fontFamily: "'Space Mono', monospace" }}
-        >
-          YapLog
-        </span>
-      </div>
+      <BreadcrumbNav
+        compact
+        className="flex-1 overflow-hidden"
+        items={breadcrumbs}
+      />
     </header>
   )
 }

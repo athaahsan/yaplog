@@ -48,6 +48,38 @@ export function useMasterData() {
     })
   }
 
+  function updateTaskItems(updater) {
+    updateMasterData((current) => {
+      const currentItems = current.tasks.items
+      const nextItems =
+        typeof updater === 'function' ? updater(currentItems) : updater
+
+      return {
+        ...current,
+        tasks: {
+          ...current.tasks,
+          items: nextItems,
+        },
+      }
+    })
+  }
+
+  function updateMemoItems(updater) {
+    updateMasterData((current) => {
+      const currentItems = current.memos.items
+      const nextItems =
+        typeof updater === 'function' ? updater(currentItems) : updater
+
+      return {
+        ...current,
+        memos: {
+          ...current.memos,
+          items: nextItems,
+        },
+      }
+    })
+  }
+
   function exportData() {
     const blob = new Blob([JSON.stringify(masterData, null, 2)], {
       type: 'application/json',
@@ -118,7 +150,9 @@ export function useMasterData() {
     setImportError,
     setMasterData,
     updateJournalEntries,
+    updateMemoItems,
     updateSetting,
+    updateTaskItems,
   }
 }
 

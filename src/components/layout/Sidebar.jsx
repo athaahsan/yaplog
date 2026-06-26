@@ -2,15 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import {
   CalendarDays,
   CheckSquare,
-  Download,
   FileText,
-  Laptop,
+  Home,
   LogIn,
   LogOut,
-  Moon,
   NotebookPen,
-  Sun,
-  Upload,
+  Settings,
   UserRound,
   X,
 } from 'lucide-react'
@@ -19,34 +16,11 @@ import { APP_VERSION } from '@/data/appConfig'
 import { cn } from '@/lib/utils'
 
 const appLinks = [
+  { label: 'Dashboard', icon: Home },
   { label: 'Journal', icon: NotebookPen },
   { label: 'Calendar', icon: CalendarDays },
   { label: 'Tasks', icon: CheckSquare },
   { label: 'Notes', icon: FileText },
-]
-
-const themeOptions = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Laptop },
-]
-
-const fontOptions = [
-  {
-    value: 'default',
-    label: 'Default',
-    fontFamily: "'Geist Variable', sans-serif",
-  },
-  {
-    value: 'serif',
-    label: 'Serif',
-    fontFamily: "'Lora', serif",
-  },
-  {
-    value: 'mono',
-    label: 'Mono',
-    fontFamily: "'Space Mono', monospace",
-  },
 ]
 
 const userMenuItemClassName =
@@ -57,18 +31,13 @@ function Sidebar({
   activeApp,
   authLoading,
   authProfile,
-  font,
   onSelectApp,
   onCloseSidebar,
-  onExportData,
-  onImportData,
   onProfile,
+  onSettings,
   onSignIn,
   onSignOut,
   sidebarOpen,
-  theme,
-  onThemeChange,
-  onFontChange,
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [failedAvatarUrl, setFailedAvatarUrl] = useState('')
@@ -97,9 +66,9 @@ function Sidebar({
       data-open={sidebarOpen}
       aria-label="Main navigation"
     >
-      <header className="flex min-h-16 items-center gap-2.5 border-b border-sidebar-border px-[18px]">
+      <header className="flex min-h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
         <span
-          className="flex-1 text-[17px] font-semibold underline decoration-double"
+          className="flex-1 text-[19px] font-semibold underline decoration-double"
           style={{ fontFamily: "'Space Mono', monospace" }}
         >
           YapLog
@@ -112,18 +81,12 @@ function Sidebar({
           aria-label="Close sidebar"
           onClick={onCloseSidebar}
         >
-          <X size={18} />
+          <X className="size-4.5" />
         </Button>
       </header>
 
-      <nav className="flex flex-1 flex-col gap-7 px-3 py-[18px] max-[720px]:gap-[18px]">
-        <section aria-labelledby="apps-heading">
-          <h2
-            className="mb-2 px-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-            id="apps-heading"
-          >
-            Workspace
-          </h2>
+      <nav className="flex flex-1 flex-col px-3 py-4">
+        <section aria-label="Workspace">
           <div className="grid gap-1">
             {appLinks.map((item) => {
               const Icon = item.icon
@@ -149,75 +112,10 @@ function Sidebar({
             })}
           </div>
         </section>
-
-        <section aria-labelledby="appearance-heading">
-          <h2
-            className="mb-2 px-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground"
-            id="appearance-heading"
-          >
-            Appearance
-          </h2>
-          <div className="grid grid-cols-3 gap-1">
-            {themeOptions.map((option) => {
-              const Icon = option.icon
-              const active = theme === option.value
-
-              return (
-                <Button
-                  className={cn(
-                    'h-[38px] w-full rounded-lg border border-transparent p-0 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
-                    active &&
-                      'bg-sidebar-accent text-sidebar-accent-foreground',
-                  )}
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  aria-label={`Use ${option.label.toLowerCase()} theme`}
-                  aria-pressed={active}
-                  data-active={active}
-                  key={option.value}
-                  onClick={() => onThemeChange(option.value)}
-                  title={option.label}
-                >
-                  <Icon size={15} />
-                </Button>
-              )
-            })}
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-1">
-            {fontOptions.map((option) => {
-              const active = font === option.value
-
-              return (
-                <Button
-                  className={cn(
-                    'grid h-[72px] gap-1 rounded-lg border border-transparent px-1.5 py-2 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
-                    active &&
-                      'bg-sidebar-accent text-sidebar-accent-foreground',
-                  )}
-                  variant="ghost"
-                  type="button"
-                  aria-label={`Use ${option.label.toLowerCase()} font`}
-                  aria-pressed={active}
-                  key={option.value}
-                  onClick={() => onFontChange(option.value)}
-                  style={{ fontFamily: option.fontFamily }}
-                >
-                  <span className="text-[26px] font-semibold leading-none">
-                    Ag
-                  </span>
-                  <span className="text-[11px] font-semibold leading-none">
-                    {option.label}
-                  </span>
-                </Button>
-              )
-            })}
-          </div>
-        </section>
       </nav>
 
       <div
-        className="px-5 pb-3 text-[11px] font-semibold leading-none text-muted-foreground"
+        className="px-5 py-3 text-[11px] font-semibold leading-none text-muted-foreground"
         style={{ fontFamily: "'Space Mono', monospace" }}
       >
         Version {APP_VERSION.replace(/^v/i, '')}
@@ -282,7 +180,19 @@ function Sidebar({
                   <span>Account</span>
                 </Button>
 
-                <div className={userMenuDividerClassName} role="separator" />
+                <Button
+                  className={userMenuItemClassName}
+                  variant="ghost"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onSettings()
+                    setUserMenuOpen(false)
+                  }}
+                >
+                  <Settings size={16} />
+                  <span>Settings</span>
+                </Button>
               </>
             ) : (
               <>
@@ -301,54 +211,39 @@ function Sidebar({
                   <span>{authLoading ? 'Checking...' : 'Log in'}</span>
                 </Button>
 
-                <div className={userMenuDividerClassName} role="separator" />
+                <Button
+                  className={userMenuItemClassName}
+                  variant="ghost"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onSettings()
+                    setUserMenuOpen(false)
+                  }}
+                >
+                  <Settings size={16} />
+                  <span>Settings</span>
+                </Button>
               </>
             )}
-
-            <Button
-              className={userMenuItemClassName}
-              variant="ghost"
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                onExportData()
-                setUserMenuOpen(false)
-              }}
-            >
-              <Download size={16} />
-              <span>Export data</span>
-            </Button>
-            <Button
-              className={userMenuItemClassName}
-              variant="ghost"
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                onImportData()
-                setUserMenuOpen(false)
-              }}
-            >
-              <Upload size={16} />
-              <span>Import data</span>
-            </Button>
 
             {signedIn && (
               <>
                 <div className={userMenuDividerClassName} role="separator" />
 
-              <Button
-                className={userMenuItemClassName}
-                variant="ghost"
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onSignOut()
-                  setUserMenuOpen(false)
-                }}
-              >
-                <LogOut size={16} />
-                <span>Log out</span>
-              </Button>
+                <Button
+                  className={userMenuItemClassName}
+                  variant="ghost"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onSignOut()
+                    setUserMenuOpen(false)
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Log out</span>
+                </Button>
               </>
             )}
           </div>

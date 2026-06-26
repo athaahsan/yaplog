@@ -1,24 +1,41 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import DashboardWorkspace from './dashboard/DashboardWorkspace'
 import JournalWorkspace from './journal/JournalWorkspace'
+import NotesWorkspace from './notes/NotesWorkspace'
 import PlaceholderWorkspace from './PlaceholderWorkspace'
+import TasksWorkspace from './tasks/TasksWorkspace'
 
 function AppRoutes({
   authScopeKey,
   entries,
   onEntriesChange,
+  memoItems,
+  onMemoItemsChange,
+  onTaskItemsChange,
+  taskItems,
   voiceInputEnabled,
   voiceInputUserId,
 }) {
   const location = useLocation()
-  const journalRedirect = {
-    pathname: '/journal',
+  const dashboardRedirect = {
+    pathname: '/dashboard',
     search: location.search,
     hash: location.hash,
   }
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={journalRedirect} replace />} />
+      <Route path="/" element={<Navigate to={dashboardRedirect} replace />} />
+      <Route
+        path="/dashboard"
+        element={
+          <DashboardWorkspace
+            entries={entries}
+            memoItems={memoItems}
+            taskItems={taskItems}
+          />
+        }
+      />
       <Route
         path="/journal"
         element={
@@ -61,14 +78,24 @@ function AppRoutes({
       />
       <Route
         path="/tasks"
-        element={<PlaceholderWorkspace activeApp="Tasks" />}
+        element={
+          <TasksWorkspace
+            items={taskItems}
+            onItemsChange={onTaskItemsChange}
+          />
+        }
       />
       <Route
         path="/notes"
-        element={<PlaceholderWorkspace activeApp="Notes" />}
+        element={
+          <NotesWorkspace
+            items={memoItems}
+            onItemsChange={onMemoItemsChange}
+          />
+        }
       />
       <Route path="/memos" element={<Navigate to="/notes" replace />} />
-      <Route path="*" element={<Navigate to="/journal" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }

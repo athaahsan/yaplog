@@ -337,11 +337,13 @@ function VoiceInputDialog({ onClose, onTranscript, userId }) {
   const mediaRecorderRef = useRef(null)
   const recordingChunksRef = useRef([])
   const recordingStreamRef = useRef(null)
+  const recordingStartedAtRef = useRef(0)
   const [audioBlob, setAudioBlob] = useState(null)
   const [audioName, setAudioName] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [error, setError] = useState('')
   const [recording, setRecording] = useState(false)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
   const [requestingMic, setRequestingMic] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
   const [waveLevels, setWaveLevels] = useState(idleWaveLevels)
@@ -368,6 +370,22 @@ function VoiceInputDialog({ onClose, onTranscript, userId }) {
       }
     }
   }, [audioUrl])
+
+  useEffect(() => {
+    if (!recording) {
+      return undefined
+    }
+
+    function updateRecordingSeconds() {
+      const elapsedMs = Date.now() - recordingStartedAtRef.current
+      setRecordingSeconds(Math.max(0, Math.floor(elapsedMs / 1000)))
+    }
+
+    updateRecordingSeconds()
+    const intervalId = window.setInterval(updateRecordingSeconds, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [recording])
 
   function stopLevelMeter({ reset = true } = {}) {
     if (levelAnimationFrameRef.current) {
@@ -454,6 +472,7 @@ function VoiceInputDialog({ onClose, onTranscript, userId }) {
       mediaRecorderRef.current = mediaRecorder
       setAudioBlob(null)
       setAudioUrl('')
+      setRecordingSeconds(0)
       startLevelMeter(stream)
 
       mediaRecorder.addEventListener('dataavailable', (event) => {
@@ -480,6 +499,7 @@ function VoiceInputDialog({ onClose, onTranscript, userId }) {
       })
 
       mediaRecorder.start()
+      recordingStartedAtRef.current = Date.now()
       setRecording(true)
     } catch (requestError) {
       setError(
@@ -502,6 +522,7 @@ function VoiceInputDialog({ onClose, onTranscript, userId }) {
     stopLevelMeter()
     stopMediaTracks()
     setRecording(false)
+    setRecordingSeconds(0)
   }
 
   function resetRecording() {
@@ -655,6 +676,14 @@ function VoiceInputDialog({ onClose, onTranscript, userId }) {
                   ? 'Opening microphone...'
                   : 'Start yapping'}
             </p>
+            {recording && (
+              <p
+                className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground"
+                aria-live="polite"
+              >
+                {formatAudioTime(recordingSeconds)}
+              </p>
+            )}
             <p className="mt-1 text-sm text-muted-foreground">
               {recording
                 ? 'Press stop when you are done.'
