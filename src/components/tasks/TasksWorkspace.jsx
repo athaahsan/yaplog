@@ -273,6 +273,7 @@ function TasksWorkspace({ items, onItemsChange }) {
                     updateSubtask(task.id, subtaskId, updates)
                   }
                   onUpdateTask={(updates) => updateTask(task.id, updates)}
+                  searchQuery={searchQuery}
                   task={task}
                 />
               </div>
@@ -647,6 +648,7 @@ function EditableTaskRow({
   onToggleTask,
   onUpdateSubtask,
   onUpdateTask,
+  searchQuery,
   task,
 }) {
   const subtasks = Array.isArray(task.subtasks) ? task.subtasks : []
@@ -714,7 +716,7 @@ function EditableTaskRow({
                   task.completed && 'text-muted-foreground line-through',
                 )}
                 value={task.title}
-                placeholder="Some task"
+                placeholder="Task title"
                 rows={1}
                 onChange={(event) => onUpdateTask({ title: event.target.value })}
               />
@@ -722,14 +724,14 @@ function EditableTaskRow({
               <textarea
                 className="block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-muted-foreground outline-none [field-sizing:content] placeholder:text-muted-foreground/60 focus-visible:ring-0"
                 value={task.notes}
-                placeholder="Some task description"
+                placeholder="Task description"
                 rows={getInlineTextareaRows(task.notes)}
                 onChange={(event) => onUpdateTask({ notes: event.target.value })}
               />
 
               <DatePicker
                 value={task.dueDate}
-                placeholder="Task date / deadline"
+                placeholder="Due date"
                 onChange={(dueDate) => onUpdateTask({ dueDate })}
               />
 
@@ -760,6 +762,7 @@ function EditableTaskRow({
           ) : (
             <TaskViewContent
               onToggleSubtask={onToggleSubtask}
+              searchQuery={searchQuery}
               task={task}
             />
           )}
@@ -769,7 +772,7 @@ function EditableTaskRow({
   )
 }
 
-function TaskViewContent({ onToggleSubtask, task }) {
+function TaskViewContent({ onToggleSubtask, searchQuery, task }) {
   const subtasks = Array.isArray(task.subtasks) ? task.subtasks : []
 
   return (
@@ -780,11 +783,14 @@ function TaskViewContent({ onToggleSubtask, task }) {
           task.completed && 'text-muted-foreground line-through',
         )}
       >
-        {task.title.trim() || 'Untitled task'}
+        <HighlightedText
+          query={searchQuery}
+          text={task.title.trim() || 'Untitled task'}
+        />
       </p>
       {task.notes && (
         <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
-          {task.notes}
+          <HighlightedText query={searchQuery} text={task.notes} />
         </p>
       )}
       {task.dueDate && (
@@ -796,6 +802,7 @@ function TaskViewContent({ onToggleSubtask, task }) {
             <SubtaskViewContent
               key={subtask.id}
               onToggle={() => onToggleSubtask(subtask)}
+              searchQuery={searchQuery}
               subtask={subtask}
             />
           ))}
@@ -805,7 +812,7 @@ function TaskViewContent({ onToggleSubtask, task }) {
   )
 }
 
-function SubtaskViewContent({ onToggle, subtask }) {
+function SubtaskViewContent({ onToggle, searchQuery, subtask }) {
   return (
     <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
       <CheckButton
@@ -821,11 +828,14 @@ function SubtaskViewContent({ onToggle, subtask }) {
             subtask.completed && 'text-muted-foreground line-through',
           )}
         >
-          {subtask.title || 'Untitled subtask'}
+          <HighlightedText
+            query={searchQuery}
+            text={subtask.title || 'Untitled subtask'}
+          />
         </p>
         {subtask.notes && (
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-            {subtask.notes}
+            <HighlightedText query={searchQuery} text={subtask.notes} />
           </p>
         )}
         {subtask.dueDate && (
@@ -868,20 +878,20 @@ function EditableSubtaskRow({ onDelete, onToggle, onUpdate, subtask }) {
             subtask.completed && 'text-muted-foreground line-through',
           )}
           value={subtask.title}
-          placeholder="Subtask"
+          placeholder="Subtask title"
           rows={1}
           onChange={(event) => onUpdate({ title: event.target.value })}
         />
         <textarea
           className="mt-1 block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-xs leading-5 text-muted-foreground outline-none [field-sizing:content] placeholder:text-muted-foreground/60 focus-visible:ring-0"
           value={subtask.notes}
-          placeholder="Some subtask description"
+          placeholder="Subtask description"
           rows={getInlineTextareaRows(subtask.notes)}
           onChange={(event) => onUpdate({ notes: event.target.value })}
         />
         <DatePicker
           value={subtask.dueDate}
-          placeholder="Subtask date"
+          placeholder="Due date"
           compact
           onChange={(dueDate) => onUpdate({ dueDate })}
         />
@@ -1069,13 +1079,17 @@ function TaskDateLine({ className, placeholder, value }) {
     <span
       className={cn(
         'inline-flex items-center gap-1.5 text-xs font-medium leading-5 text-muted-foreground',
-        dueDate?.status === 'future' && 'text-emerald-500',
-        dueDate?.status === 'today' && 'text-yellow-500',
-        dueDate?.status === 'overdue' && 'text-destructive',
         className,
       )}
     >
-      <Calendar className="size-3.5" />
+      <Calendar
+        className={cn(
+          'size-3.5',
+          dueDate?.status === 'future' && 'text-emerald-500',
+          dueDate?.status === 'today' && 'text-yellow-500',
+          dueDate?.status === 'overdue' && 'text-destructive',
+        )}
+      />
       <span>{dueDate ? dueDate.label : placeholder}</span>
     </span>
   )
@@ -1134,6 +1148,33 @@ function getTaskSearchText(task) {
     : ''
 
   return `${task.title || ''} ${task.notes || ''} ${subtaskText}`.toLowerCase()
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function HighlightedText({ query, text }) {
+  const normalizedQuery = query.trim()
+
+  if (!normalizedQuery) {
+    return text
+  }
+
+  const parts = text.split(new RegExp(`(${escapeRegExp(normalizedQuery)})`, 'gi'))
+
+  return parts.map((part, index) =>
+    part.toLowerCase() === normalizedQuery.toLowerCase() ? (
+      <mark
+        className="rounded-[3px] bg-primary/20 px-0.5 text-foreground"
+        key={`${part}-${index}`}
+      >
+        {part}
+      </mark>
+    ) : (
+      <span key={`${part}-${index}`}>{part}</span>
+    ),
+  )
 }
 
 function getInlineTextareaRows(value) {

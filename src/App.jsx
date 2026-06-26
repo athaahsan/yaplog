@@ -46,6 +46,7 @@ function App() {
     replaceWithImport,
     setImportError,
     setMasterData,
+    updateCalendarEvents,
     updateJournalEntries,
     updateMemoItems,
     updateSetting,
@@ -238,8 +239,10 @@ function App() {
     >
       <AppRoutes
         authScopeKey={authScopeKey}
+        calendarEvents={masterData.calendar.events}
         entries={masterData.journal.entries}
         memoItems={masterData.memos.items}
+        onCalendarEventsChange={updateCalendarEvents}
         onEntriesChange={updateJournalEntries}
         onMemoItemsChange={updateMemoItems}
         onTaskItemsChange={updateTaskItems}
@@ -346,8 +349,9 @@ function ImportDialog({ onCancel, onMerge, onReplace }) {
           Import data
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Replace swaps your local master JSON with this file. Merge keeps
-          your settings and appends the imported journal entries.
+          Replace swaps your current YapLog data with this file. Merge keeps
+          your current settings and adds the imported journals, tasks, calendar
+          events, and notes.
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
           <Button type="button" onClick={onReplace}>

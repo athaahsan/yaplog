@@ -64,6 +64,22 @@ export function useMasterData() {
     })
   }
 
+  function updateCalendarEvents(updater) {
+    updateMasterData((current) => {
+      const currentEvents = current.calendar.events
+      const nextEvents =
+        typeof updater === 'function' ? updater(currentEvents) : updater
+
+      return {
+        ...current,
+        calendar: {
+          ...current.calendar,
+          events: nextEvents,
+        },
+      }
+    })
+  }
+
   function updateMemoItems(updater) {
     updateMasterData((current) => {
       const currentItems = current.memos.items
@@ -149,6 +165,7 @@ export function useMasterData() {
     replaceWithImport,
     setImportError,
     setMasterData,
+    updateCalendarEvents,
     updateJournalEntries,
     updateMemoItems,
     updateSetting,

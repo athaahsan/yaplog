@@ -5,19 +5,19 @@ import {
   FileText,
   NotebookPen,
   PenLine,
-  Star,
+  Pin,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
-function DashboardWorkspace({ entries, memoItems, taskItems }) {
+function DashboardWorkspace({ calendarEvents = [], entries, memoItems, taskItems }) {
   const latestEntry = getLatestByDate(entries, 'createdAt')
   const recentEntries = [...entries]
     .sort((first, second) => getDateTime(second.createdAt) - getDateTime(first.createdAt))
     .slice(0, 4)
   const activeTasks = taskItems.filter((item) => !item.completed)
   const dueSoonTasks = activeTasks.filter(isDueSoon)
-  const starredNotes = memoItems.filter((item) => item.favorite)
+  const pinnedNotes = memoItems.filter((item) => item.favorite)
   const lastJournalState = getLastJournalState(latestEntry)
 
   return (
@@ -66,14 +66,14 @@ function DashboardWorkspace({ entries, memoItems, taskItems }) {
             icon={FileText}
             label="Notes"
             value={memoItems.length}
-            detail={starredNotes.length ? `${starredNotes.length} starred` : 'No starred notes'}
+            detail={pinnedNotes.length ? `${pinnedNotes.length} pinned` : 'No pinned notes'}
             to="/notes"
           />
           <SummaryCard
             icon={CalendarDays}
             label="Calendar"
-            value="Soon"
-            detail="Waiting for events"
+            value={calendarEvents.length}
+            detail={calendarEvents.length === 1 ? '1 event' : `${calendarEvents.length} events`}
             to="/calendar"
           />
         </section>
@@ -155,18 +155,18 @@ function DashboardWorkspace({ entries, memoItems, taskItems }) {
 
             <section
               className="rounded-[8px] border border-border bg-card text-card-foreground"
-              aria-labelledby="starred-notes-title"
+              aria-labelledby="pinned-notes-title"
             >
-              <SectionHeader title="Starred notes" actionLabel="Open notes" to="/notes" />
-              {starredNotes.length > 0 ? (
+              <SectionHeader title="Pinned notes" actionLabel="Open notes" to="/notes" />
+              {pinnedNotes.length > 0 ? (
                 <div className="divide-y divide-border">
-                  {starredNotes.slice(0, 3).map((note) => (
+                  {pinnedNotes.slice(0, 3).map((note) => (
                     <div
                       className="grid gap-1 px-4 py-3"
                       key={note.id}
                     >
                       <p className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-                        <Star className="size-3.5 shrink-0 fill-current text-amber-500" />
+                        <Pin className="size-3.5 shrink-0 fill-current text-amber-500" />
                         <span className="truncate">
                           {note.title?.trim() || 'Untitled note'}
                         </span>
@@ -180,7 +180,7 @@ function DashboardWorkspace({ entries, memoItems, taskItems }) {
               ) : (
                 <EmptyPanel
                   icon={FileText}
-                  text="No starred notes yet."
+                  text="No pinned notes yet."
                   actionLabel="See notes"
                   to="/notes"
                 />

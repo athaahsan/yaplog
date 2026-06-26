@@ -50,6 +50,9 @@ export function createDefaultMasterData(overrides = {}) {
     tasks: {
       items: overrides.tasks?.items || [],
     },
+    calendar: {
+      events: overrides.calendar?.events || [],
+    },
     memos: {
       items: overrides.memos?.items || [],
     },
@@ -72,6 +75,7 @@ export function normalizeMasterData(value, options = {}) {
   const sourceSettings = isObject(value.settings) ? value.settings : {}
   const sourceJournal = isObject(value.journal) ? value.journal : {}
   const sourceTasks = isObject(value.tasks) ? value.tasks : {}
+  const sourceCalendar = isObject(value.calendar) ? value.calendar : {}
   const sourceMemos = isObject(value.memos) ? value.memos : {}
 
   return {
@@ -94,6 +98,9 @@ export function normalizeMasterData(value, options = {}) {
     },
     tasks: {
       items: normalizeTaskItems(sourceTasks.items),
+    },
+    calendar: {
+      events: normalizeCalendarEvents(sourceCalendar.events),
     },
     memos: {
       items: normalizeMemoItems(sourceMemos.items),
@@ -135,6 +142,9 @@ export function mergeMasterData(currentMasterData, importedMasterData) {
   const imported = normalizeMasterData(importedMasterData)
   const existingIds = new Set(current.journal.entries.map((entry) => entry.id))
   const existingTaskIds = new Set(current.tasks.items.map((item) => item.id))
+  const existingCalendarEventIds = new Set(
+    current.calendar.events.map((event) => event.id),
+  )
   const existingMemoIds = new Set(current.memos.items.map((item) => item.id))
 
   const importedEntries = imported.journal.entries.map((entry) => {
@@ -159,6 +169,17 @@ export function mergeMasterData(currentMasterData, importedMasterData) {
     return nextItem
   })
 
+  const importedCalendarEvents = imported.calendar.events.map((event) => {
+    if (!existingCalendarEventIds.has(event.id)) {
+      existingCalendarEventIds.add(event.id)
+      return event
+    }
+
+    const nextEvent = { ...event, id: createId('event') }
+    existingCalendarEventIds.add(nextEvent.id)
+    return nextEvent
+  })
+
   const importedMemoItems = imported.memos.items.map((item) => {
     if (!existingMemoIds.has(item.id)) {
       existingMemoIds.add(item.id)
@@ -178,6 +199,9 @@ export function mergeMasterData(currentMasterData, importedMasterData) {
     },
     tasks: {
       items: [...current.tasks.items, ...importedTaskItems],
+    },
+    calendar: {
+      events: [...current.calendar.events, ...importedCalendarEvents],
     },
     memos: {
       items: [...current.memos.items, ...importedMemoItems],
@@ -319,6 +343,53 @@ function normalizeSubtaskItems(items) {
     })
 }
 
+function normalizeCalendarEvents(events) {
+  if (!Array.isArray(events)) {
+    return []
+  }
+
+  const usedIds = new Set()
+
+  return events
+    .filter(isObject)
+    .map((event) => {
+      const now = nowIso()
+      const id =
+        typeof event.id === 'string' && event.id.trim()
+          ? event.id.trim()
+          : createId('event')
+      const uniqueId = usedIds.has(id) ? createId('event') : id
+
+      usedIds.add(uniqueId)
+
+      return {
+        id: uniqueId,
+        title: typeof event.title === 'string' ? event.title.slice(0, 180) : '',
+        description:
+          typeof event.description === 'string'
+            ? event.description.slice(0, 6000)
+            : '',
+        date:
+          typeof event.date === 'string' && event.date
+            ? event.date.slice(0, 10)
+            : toDateKey(new Date()),
+        time:
+          typeof event.time === 'string' && /^\d{2}:\d{2}$/.test(event.time)
+            ? event.time
+            : '',
+        allDay: Boolean(event.allDay),
+        createdAt:
+          typeof event.createdAt === 'string' && event.createdAt
+            ? event.createdAt
+            : now,
+        updatedAt:
+          typeof event.updatedAt === 'string' && event.updatedAt
+            ? event.updatedAt
+            : event.createdAt || now,
+      }
+    })
+}
+
 function normalizeMemoItems(items) {
   if (!Array.isArray(items)) {
     return []
@@ -353,4 +424,9 @@ function normalizeMemoItems(items) {
             : item.createdAt || now,
       }
     })
+}
+
+function toDateKey(date) {
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return offsetDate.toISOString().slice(0, 10)
 }

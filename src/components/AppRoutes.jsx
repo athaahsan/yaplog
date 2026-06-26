@@ -1,13 +1,15 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import CalendarWorkspace from './calendar/CalendarWorkspace'
 import DashboardWorkspace from './dashboard/DashboardWorkspace'
 import JournalWorkspace from './journal/JournalWorkspace'
 import NotesWorkspace from './notes/NotesWorkspace'
-import PlaceholderWorkspace from './PlaceholderWorkspace'
 import TasksWorkspace from './tasks/TasksWorkspace'
 
 function AppRoutes({
   authScopeKey,
+  calendarEvents,
   entries,
+  onCalendarEventsChange,
   onEntriesChange,
   memoItems,
   onMemoItemsChange,
@@ -30,6 +32,7 @@ function AppRoutes({
         path="/dashboard"
         element={
           <DashboardWorkspace
+            calendarEvents={calendarEvents}
             entries={entries}
             memoItems={memoItems}
             taskItems={taskItems}
@@ -74,7 +77,14 @@ function AppRoutes({
       />
       <Route
         path="/calendar"
-        element={<PlaceholderWorkspace activeApp="Calendar" />}
+        element={
+          <CalendarWorkspace
+            entries={entries}
+            events={calendarEvents}
+            onEventsChange={onCalendarEventsChange}
+            taskItems={taskItems}
+          />
+        }
       />
       <Route
         path="/tasks"
